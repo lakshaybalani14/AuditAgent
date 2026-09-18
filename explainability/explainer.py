@@ -49,7 +49,7 @@ def build_prompt(state, action):
 def explain_decision(state, action, client):
     prompt = build_prompt(state, action)
     response = client.messages.create(
-        model="claude-sonnet-5",
+        model="claude-3-5-sonnet-20241022",
         max_tokens=200,
         messages=[{"role": "user", "content": prompt}],
     )

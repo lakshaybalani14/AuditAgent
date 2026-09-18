@@ -2,226 +2,226 @@
   {
     "state": {
       "time": 0,
-      "queue_length": 0,
+      "queue_length": 1,
       "avg_wait_time": 0.0,
-      "max_wait_time": 0.0,
+      "max_wait_time": 0,
       "num_io_bound": 0,
-      "num_cpu_bound": 0,
+      "num_cpu_bound": 1,
       "current_algo": 0,
       "is_starving": false
     },
     "action": 3,
     "action_name": "switch to MLFQ",
-    "explanation": null
+    "explanation": "Switching to Multilevel Feedback Queue (MLFQ) is ideal for this mixed workload, giving I/O-bound processes quick responses while penalizing long CPU bursts."
   },
   {
     "state": {
-      "time": 1,
+      "time": 2,
       "queue_length": 2,
       "avg_wait_time": 0.0,
       "max_wait_time": 0,
-      "num_io_bound": 0,
-      "num_cpu_bound": 2,
+      "num_io_bound": 1,
+      "num_cpu_bound": 1,
       "current_algo": 2,
       "is_starving": false
     },
     "action": 1,
     "action_name": "switch to Round Robin",
-    "explanation": null
+    "explanation": "Switching to Round Robin ensures fair CPU allocation when there are many CPU-bound processes, preventing any single process from monopolizing the system."
   },
   {
     "state": {
-      "time": 3,
+      "time": 4,
       "queue_length": 2,
       "avg_wait_time": 1.0,
       "max_wait_time": 2,
-      "num_io_bound": 0,
-      "num_cpu_bound": 2,
+      "num_io_bound": 1,
+      "num_cpu_bound": 1,
       "current_algo": 0,
       "is_starving": false
     },
-    "action": 1,
-    "action_name": "switch to Round Robin",
-    "explanation": null
+    "action": 3,
+    "action_name": "switch to MLFQ",
+    "explanation": "Switching to Multilevel Feedback Queue (MLFQ) is ideal for this mixed workload, giving I/O-bound processes quick responses while penalizing long CPU bursts."
   },
   {
     "state": {
-      "time": 5,
-      "queue_length": 2,
-      "avg_wait_time": 1.0,
-      "max_wait_time": 2,
-      "num_io_bound": 0,
-      "num_cpu_bound": 2,
-      "current_algo": 0,
-      "is_starving": false
-    },
-    "action": 1,
-    "action_name": "switch to Round Robin",
-    "explanation": null
-  },
-  {
-    "state": {
-      "time": 7,
+      "time": 6,
       "queue_length": 3,
       "avg_wait_time": 0.6666666666666666,
       "max_wait_time": 2,
-      "num_io_bound": 0,
-      "num_cpu_bound": 3,
-      "current_algo": 0,
+      "num_io_bound": 1,
+      "num_cpu_bound": 2,
+      "current_algo": 2,
       "is_starving": false
     },
-    "action": 1,
-    "action_name": "switch to Round Robin",
-    "explanation": null
+    "action": 2,
+    "action_name": "switch to Priority Scheduling",
+    "explanation": "Switching to Priority Scheduling allows high-priority tasks to be completed quickly as the queue depth increases."
   },
   {
     "state": {
-      "time": 9,
-      "queue_length": 3,
-      "avg_wait_time": 1.3333333333333333,
-      "max_wait_time": 2,
-      "num_io_bound": 0,
-      "num_cpu_bound": 3,
-      "current_algo": 0,
-      "is_starving": false
-    },
-    "action": 1,
-    "action_name": "switch to Round Robin",
-    "explanation": null
-  },
-  {
-    "state": {
-      "time": 11,
+      "time": 8,
       "queue_length": 3,
       "avg_wait_time": 2.0,
-      "max_wait_time": 4,
-      "num_io_bound": 0,
-      "num_cpu_bound": 3,
-      "current_algo": 0,
-      "is_starving": false
-    },
-    "action": 1,
-    "action_name": "switch to Round Robin",
-    "explanation": null
-  },
-  {
-    "state": {
-      "time": 13,
-      "queue_length": 4,
-      "avg_wait_time": 1.5,
       "max_wait_time": 4,
       "num_io_bound": 1,
-      "num_cpu_bound": 3,
-      "current_algo": 0,
+      "num_cpu_bound": 2,
+      "current_algo": 1,
       "is_starving": false
     },
     "action": 1,
     "action_name": "switch to Round Robin",
-    "explanation": null
+    "explanation": "Switching to Round Robin ensures fair CPU allocation when there are many CPU-bound processes, preventing any single process from monopolizing the system."
   },
   {
     "state": {
-      "time": 15,
+      "time": 10,
       "queue_length": 4,
       "avg_wait_time": 2.0,
-      "max_wait_time": 4,
+      "max_wait_time": 6,
       "num_io_bound": 2,
       "num_cpu_bound": 2,
-      "current_algo": 0,
-      "is_starving": false
-    },
-    "action": 1,
-    "action_name": "switch to Round Robin",
-    "explanation": null
-  },
-  {
-    "state": {
-      "time": 17,
-      "queue_length": 6,
-      "avg_wait_time": 1.6666666666666667,
-      "max_wait_time": 4,
-      "num_io_bound": 2,
-      "num_cpu_bound": 4,
       "current_algo": 0,
       "is_starving": false
     },
     "action": 0,
     "action_name": "no change",
-    "explanation": null
+    "explanation": "The current scheduling algorithm is performing well, with wait times stable. No intervention is necessary at this time."
   },
   {
     "state": {
-      "time": 19,
-      "queue_length": 9,
-      "avg_wait_time": 1.7777777777777777,
-      "max_wait_time": 6,
+      "time": 12,
+      "queue_length": 5,
+      "avg_wait_time": 1.6,
+      "max_wait_time": 4,
       "num_io_bound": 2,
-      "num_cpu_bound": 7,
+      "num_cpu_bound": 3,
       "current_algo": 0,
       "is_starving": false
     },
     "action": 2,
     "action_name": "switch to Priority Scheduling",
-    "explanation": null
+    "explanation": "Switching to Priority Scheduling allows high-priority tasks to be completed quickly as the queue depth increases."
+  },
+  {
+    "state": {
+      "time": 14,
+      "queue_length": 7,
+      "avg_wait_time": 1.7142857142857142,
+      "max_wait_time": 4,
+      "num_io_bound": 2,
+      "num_cpu_bound": 5,
+      "current_algo": 1,
+      "is_starving": false
+    },
+    "action": 2,
+    "action_name": "switch to Priority Scheduling",
+    "explanation": "Switching to Priority Scheduling allows high-priority tasks to be completed quickly as the queue depth increases."
+  },
+  {
+    "state": {
+      "time": 16,
+      "queue_length": 7,
+      "avg_wait_time": 2.857142857142857,
+      "max_wait_time": 6,
+      "num_io_bound": 2,
+      "num_cpu_bound": 5,
+      "current_algo": 1,
+      "is_starving": false
+    },
+    "action": 2,
+    "action_name": "switch to Priority Scheduling",
+    "explanation": "Switching to Priority Scheduling allows high-priority tasks to be completed quickly as the queue depth increases."
+  },
+  {
+    "state": {
+      "time": 17,
+      "queue_length": 8,
+      "avg_wait_time": 2.5,
+      "max_wait_time": 5,
+      "num_io_bound": 2,
+      "num_cpu_bound": 6,
+      "current_algo": 1,
+      "is_starving": false
+    },
+    "action": 2,
+    "action_name": "switch to Priority Scheduling",
+    "explanation": "Switching to Priority Scheduling allows high-priority tasks to be completed quickly as the queue depth increases."
+  },
+  {
+    "state": {
+      "time": 19,
+      "queue_length": 8,
+      "avg_wait_time": 3.625,
+      "max_wait_time": 7,
+      "num_io_bound": 2,
+      "num_cpu_bound": 6,
+      "current_algo": 1,
+      "is_starving": false
+    },
+    "action": 0,
+    "action_name": "no change",
+    "explanation": "The current scheduling algorithm is performing well, with wait times stable. No intervention is necessary at this time."
   },
   {
     "state": {
       "time": 21,
       "queue_length": 9,
-      "avg_wait_time": 2.888888888888889,
-      "max_wait_time": 6,
-      "num_io_bound": 2,
-      "num_cpu_bound": 7,
-      "current_algo": 1,
-      "is_starving": false
-    },
-    "action": 2,
-    "action_name": "switch to Priority Scheduling",
-    "explanation": null
-  },
-  {
-    "state": {
-      "time": 23,
-      "queue_length": 9,
-      "avg_wait_time": 4.0,
-      "max_wait_time": 6,
-      "num_io_bound": 2,
-      "num_cpu_bound": 7,
-      "current_algo": 1,
-      "is_starving": false
-    },
-    "action": 2,
-    "action_name": "switch to Priority Scheduling",
-    "explanation": null
-  },
-  {
-    "state": {
-      "time": 25,
-      "queue_length": 9,
-      "avg_wait_time": 5.111111111111111,
-      "max_wait_time": 8,
-      "num_io_bound": 2,
-      "num_cpu_bound": 7,
+      "avg_wait_time": 4.222222222222222,
+      "max_wait_time": 9,
+      "num_io_bound": 3,
+      "num_cpu_bound": 6,
       "current_algo": 1,
       "is_starving": false
     },
     "action": 0,
     "action_name": "no change",
-    "explanation": null
+    "explanation": "The current scheduling algorithm is performing well, with wait times stable. No intervention is necessary at this time."
   },
   {
     "state": {
-      "time": 27,
+      "time": 23,
       "queue_length": 9,
-      "avg_wait_time": 6.222222222222222,
-      "max_wait_time": 10,
-      "num_io_bound": 2,
-      "num_cpu_bound": 7,
+      "avg_wait_time": 5.222222222222222,
+      "max_wait_time": 11,
+      "num_io_bound": 3,
+      "num_cpu_bound": 6,
       "current_algo": 1,
       "is_starving": false
     },
-    "action": 3,
-    "action_name": "switch to MLFQ",
-    "explanation": null
+    "action": 4,
+    "action_name": "boost the longest-waiting process's priority",
+    "explanation": "The maximum wait time has reached 11 ticks, indicating starvation risk. Boosting the longest-waiting process ensures it receives CPU time soon."
+  },
+  {
+    "state": {
+      "time": 24,
+      "queue_length": 8,
+      "avg_wait_time": 6.0,
+      "max_wait_time": 12,
+      "num_io_bound": 2,
+      "num_cpu_bound": 6,
+      "current_algo": 1,
+      "is_starving": false
+    },
+    "action": 4,
+    "action_name": "boost the longest-waiting process's priority",
+    "explanation": "The maximum wait time has reached 12 ticks, indicating starvation risk. Boosting the longest-waiting process ensures it receives CPU time soon."
+  },
+  {
+    "state": {
+      "time": 26,
+      "queue_length": 7,
+      "avg_wait_time": 7.857142857142857,
+      "max_wait_time": 14,
+      "num_io_bound": 2,
+      "num_cpu_bound": 5,
+      "current_algo": 1,
+      "is_starving": false
+    },
+    "action": 4,
+    "action_name": "boost the longest-waiting process's priority",
+    "explanation": "The maximum wait time has reached 14 ticks, indicating starvation risk. Boosting the longest-waiting process ensures it receives CPU time soon."
   }
 ]

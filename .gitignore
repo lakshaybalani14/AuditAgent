@@ -5,3 +5,7 @@ trained_model.zip
 dashboard/node_modules/
 dashboard/.next/
 npm-debug.log*
+.env*
+.DS_Store
+.vscode/
+.idea/
