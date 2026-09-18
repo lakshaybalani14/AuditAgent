@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+.venv/
+trained_model.zip
+dashboard/node_modules/
+dashboard/.next/
+npm-debug.log*

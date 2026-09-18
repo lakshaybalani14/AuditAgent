@@ -1,0 +1,227 @@
+[
+  {
+    "state": {
+      "time": 0,
+      "queue_length": 0,
+      "avg_wait_time": 0.0,
+      "max_wait_time": 0.0,
+      "num_io_bound": 0,
+      "num_cpu_bound": 0,
+      "current_algo": 0,
+      "is_starving": false
+    },
+    "action": 3,
+    "action_name": "switch to MLFQ",
+    "explanation": null
+  },
+  {
+    "state": {
+      "time": 1,
+      "queue_length": 2,
+      "avg_wait_time": 0.0,
+      "max_wait_time": 0,
+      "num_io_bound": 0,
+      "num_cpu_bound": 2,
+      "current_algo": 2,
+      "is_starving": false
+    },
+    "action": 1,
+    "action_name": "switch to Round Robin",
+    "explanation": null
+  },
+  {
+    "state": {
+      "time": 3,
+      "queue_length": 2,
+      "avg_wait_time": 1.0,
+      "max_wait_time": 2,
+      "num_io_bound": 0,
+      "num_cpu_bound": 2,
+      "current_algo": 0,
+      "is_starving": false
+    },
+    "action": 1,
+    "action_name": "switch to Round Robin",
+    "explanation": null
+  },
+  {
+    "state": {
+      "time": 5,
+      "queue_length": 2,
+      "avg_wait_time": 1.0,
+      "max_wait_time": 2,
+      "num_io_bound": 0,
+      "num_cpu_bound": 2,
+      "current_algo": 0,
+      "is_starving": false
+    },
+    "action": 1,
+    "action_name": "switch to Round Robin",
+    "explanation": null
+  },
+  {
+    "state": {
+      "time": 7,
+      "queue_length": 3,
+      "avg_wait_time": 0.6666666666666666,
+      "max_wait_time": 2,
+      "num_io_bound": 0,
+      "num_cpu_bound": 3,
+      "current_algo": 0,
+      "is_starving": false
+    },
+    "action": 1,
+    "action_name": "switch to Round Robin",
+    "explanation": null
+  },
+  {
+    "state": {
+      "time": 9,
+      "queue_length": 3,
+      "avg_wait_time": 1.3333333333333333,
+      "max_wait_time": 2,
+      "num_io_bound": 0,
+      "num_cpu_bound": 3,
+      "current_algo": 0,
+      "is_starving": false
+    },
+    "action": 1,
+    "action_name": "switch to Round Robin",
+    "explanation": null
+  },
+  {
+    "state": {
+      "time": 11,
+      "queue_length": 3,
+      "avg_wait_time": 2.0,
+      "max_wait_time": 4,
+      "num_io_bound": 0,
+      "num_cpu_bound": 3,
+      "current_algo": 0,
+      "is_starving": false
+    },
+    "action": 1,
+    "action_name": "switch to Round Robin",
+    "explanation": null
+  },
+  {
+    "state": {
+      "time": 13,
+      "queue_length": 4,
+      "avg_wait_time": 1.5,
+      "max_wait_time": 4,
+      "num_io_bound": 1,
+      "num_cpu_bound": 3,
+      "current_algo": 0,
+      "is_starving": false
+    },
+    "action": 1,
+    "action_name": "switch to Round Robin",
+    "explanation": null
+  },
+  {
+    "state": {
+      "time": 15,
+      "queue_length": 4,
+      "avg_wait_time": 2.0,
+      "max_wait_time": 4,
+      "num_io_bound": 2,
+      "num_cpu_bound": 2,
+      "current_algo": 0,
+      "is_starving": false
+    },
+    "action": 1,
+    "action_name": "switch to Round Robin",
+    "explanation": null
+  },
+  {
+    "state": {
+      "time": 17,
+      "queue_length": 6,
+      "avg_wait_time": 1.6666666666666667,
+      "max_wait_time": 4,
+      "num_io_bound": 2,
+      "num_cpu_bound": 4,
+      "current_algo": 0,
+      "is_starving": false
+    },
+    "action": 0,
+    "action_name": "no change",
+    "explanation": null
+  },
+  {
+    "state": {
+      "time": 19,
+      "queue_length": 9,
+      "avg_wait_time": 1.7777777777777777,
+      "max_wait_time": 6,
+      "num_io_bound": 2,
+      "num_cpu_bound": 7,
+      "current_algo": 0,
+      "is_starving": false
+    },
+    "action": 2,
+    "action_name": "switch to Priority Scheduling",
+    "explanation": null
+  },
+  {
+    "state": {
+      "time": 21,
+      "queue_length": 9,
+      "avg_wait_time": 2.888888888888889,
+      "max_wait_time": 6,
+      "num_io_bound": 2,
+      "num_cpu_bound": 7,
+      "current_algo": 1,
+      "is_starving": false
+    },
+    "action": 2,
+    "action_name": "switch to Priority Scheduling",
+    "explanation": null
+  },
+  {
+    "state": {
+      "time": 23,
+      "queue_length": 9,
+      "avg_wait_time": 4.0,
+      "max_wait_time": 6,
+      "num_io_bound": 2,
+      "num_cpu_bound": 7,
+      "current_algo": 1,
+      "is_starving": false
+    },
+    "action": 2,
+    "action_name": "switch to Priority Scheduling",
+    "explanation": null
+  },
+  {
+    "state": {
+      "time": 25,
+      "queue_length": 9,
+      "avg_wait_time": 5.111111111111111,
+      "max_wait_time": 8,
+      "num_io_bound": 2,
+      "num_cpu_bound": 7,
+      "current_algo": 1,
+      "is_starving": false
+    },
+    "action": 0,
+    "action_name": "no change",
+    "explanation": null
+  },
+  {
+    "state": {
+      "time": 27,
+      "queue_length": 9,
+      "avg_wait_time": 6.222222222222222,
+      "max_wait_time": 10,
+      "num_io_bound": 2,
+      "num_cpu_bound": 7,
+      "current_algo": 1,
+      "is_starving": false
+    },
+    "action": 3,
+    "action_name": "switch to MLFQ",
+    "explanation": null
+  }
+]
