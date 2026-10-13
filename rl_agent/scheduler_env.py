@@ -4,7 +4,9 @@ Gymnasium-compatible RL library (Stable-Baselines3) can train against it
 without knowing anything about scheduling internals.
 """
 
+import inspect
 import os
+import random
 import sys
 
 import numpy as np
@@ -16,12 +18,17 @@ from gymnasium import spaces
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "simulator"))
 from simulator_core import SimulatorCore  # noqa: E402
+from workload_profiles import (  # noqa: E402
+    normalize_workload_profiles,
+)
 
 
 class SchedulerEnv(gym.Env):
-    def __init__(self, max_processes=10):
+    def __init__(self, max_processes=10, workload_profiles=None):
         super().__init__()
         self.max_processes = max_processes
+        self.workload_profiles = normalize_workload_profiles(workload_profiles)
+        self.current_workload_profile = None
         # Matches SimulatorCore.apply_action's 5 actions: 0=no change,
         # 1=Round Robin, 2=Priority, 3=MLFQ, 4=boost longest-waiting process.
         self.action_space = spaces.Discrete(5)
@@ -30,10 +37,53 @@ class SchedulerEnv(gym.Env):
         )
         self.sim = SimulatorCore(max_processes=max_processes)
 
+    def _reset_simulator(self, seed, workload_profile):
+        """Use the profile-aware simulator contract, with legacy compatibility.
+
+        The simulator-core task can implement reset(seed=..., options=...).
+        Until then, the original random workload remains available under the
+        legacy_random profile so existing training and evaluation still run.
+        """
+        reset_parameters = inspect.signature(self.sim.reset).parameters
+        if "seed" in reset_parameters and "options" in reset_parameters:
+            self.sim.reset(
+                seed=seed,
+                options={"workload_profile": workload_profile},
+            )
+            return
+
+        if workload_profile != "legacy_random":
+            raise RuntimeError(
+                "Named workload profiles require SimulatorCore.reset(seed=None, "
+                "options=None) support. The simulator-core integration is not "
+                "available on this branch's base revision yet."
+            )
+
+        if seed is not None:
+            random.seed(seed)
+        self.sim.reset()
+
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
-        self.sim.reset()
-        return self._state_to_array(), {}
+        options = options or {}
+        requested_profile = options.get("workload_profile")
+        if requested_profile is not None:
+            if requested_profile not in self.workload_profiles:
+                raise ValueError(
+                    f"Profile {requested_profile!r} is not among configured "
+                    f"profiles: {self.workload_profiles}"
+                )
+            selected_profile = requested_profile
+        else:
+            selected_profile = self.workload_profiles[
+                int(self.np_random.integers(len(self.workload_profiles)))
+            ]
+
+        self._reset_simulator(seed, selected_profile)
+        self.current_workload_profile = selected_profile
+        return self._state_to_array(), {
+            "workload_profile": self.current_workload_profile
+        }
 
     def step(self, action):
         self.sim.apply_action(action)
@@ -43,7 +93,11 @@ class SchedulerEnv(gym.Env):
         reward = self._compute_reward(state, finished_a_process)
         terminated = self.sim.is_episode_done()
         truncated = False
-        info = {"avg_wait": state["avg_wait_time"], "is_starving": state["is_starving"]}
+        info = {
+            "avg_wait": state["avg_wait_time"],
+            "is_starving": state["is_starving"],
+            "workload_profile": self.current_workload_profile,
+        }
 
         return self._state_to_array(), reward, terminated, truncated, info
 
