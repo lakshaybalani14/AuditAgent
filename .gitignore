@@ -2,6 +2,9 @@ __pycache__/
 *.py[cod]
 .venv/
 trained_model.zip
+training_metadata.json
+*.monitor.csv
+evaluation_results.json
 dashboard/node_modules/
 dashboard/.next/
 npm-debug.log*
