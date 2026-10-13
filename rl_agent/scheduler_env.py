@@ -19,7 +19,7 @@ from simulator_core import SimulatorCore  # noqa: E402
 
 
 class SchedulerEnv(gym.Env):
-    def __init__(self, max_processes=10):
+    def __init__(self, max_processes=10, seed=None, scenario="mixed_cpu_io", workload_config=None):
         super().__init__()
         self.max_processes = max_processes
         # Matches SimulatorCore.apply_action's 5 actions: 0=no change,
@@ -28,11 +28,16 @@ class SchedulerEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=0, high=np.inf, shape=(7,), dtype=np.float32
         )
-        self.sim = SimulatorCore(max_processes=max_processes)
+        self.sim = SimulatorCore(
+            max_processes=max_processes,
+            seed=seed,
+            scenario=scenario,
+            workload_config=workload_config,
+        )
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
-        self.sim.reset()
+        self.sim.reset(seed=seed)
         return self._state_to_array(), {}
 
     def step(self, action):
