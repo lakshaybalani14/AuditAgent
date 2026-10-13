@@ -1,11 +1,12 @@
 """
-generate_decision_log.py — Runs the trained DQN model through
+generate_decision_log.py — Runs a trained DQN model through
 SchedulerEnv, greedily picking actions, and logs each (state, action)
 pair. This replaces explainer.py's generate_fake_decisions() as the
 source of real decisions once a model has been trained.
 
 Run from the project root:
     python -m rl_agent.generate_decision_log
+    python -m rl_agent.generate_decision_log --model-path runs/experiment-1/trained_model.zip
 
 Writes decision_log.json directly (with action + action_name, no
 explanation) if run standalone. If ANTHROPIC_API_KEY is set, it instead
@@ -14,6 +15,7 @@ real Claude explanations — this is the recommended path for the final
 demo.
 """
 
+import argparse
 import json
 import os
 import sys
@@ -34,21 +36,55 @@ def generate_real_decisions(model_path="trained_model", max_processes=10, n=15):
     env = SchedulerEnv(max_processes=max_processes)
 
     decisions = []
-    while len(decisions) < n:
-        obs, info = env.reset()
-        terminated = truncated = False
-        while not (terminated or truncated) and len(decisions) < n:
-            action, _ = model.predict(obs, deterministic=True)
-            action = int(action)
-            state = env.sim.get_state_summary()
-            decisions.append({"state": state, "action": action})
-            obs, reward, terminated, truncated, info = env.step(action)
+    try:
+        while len(decisions) < n:
+            obs, info = env.reset()
+            terminated = truncated = False
+            while not (terminated or truncated) and len(decisions) < n:
+                action, _ = model.predict(obs, deterministic=True)
+                action = int(action)
+                state = env.sim.get_state_summary()
+                decisions.append({"state": state, "action": action})
+                obs, reward, terminated, truncated, info = env.step(action)
+    finally:
+        env.close()
 
     return decisions
 
 
-def main():
-    decisions = generate_real_decisions()
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Generate scheduler decisions from a trained DQN model."
+    )
+    parser.add_argument(
+        "--model-path",
+        default="trained_model",
+        help="Path to the saved model (default: trained_model).",
+    )
+    parser.add_argument(
+        "--max-processes",
+        type=int,
+        default=10,
+        help="Maximum processes in the simulator (default: 10).",
+    )
+    parser.add_argument(
+        "--decisions",
+        type=int,
+        default=15,
+        help="Number of decisions to log (default: 15).",
+    )
+    args = parser.parse_args()
+    if args.max_processes < 1:
+        parser.error("--max-processes must be at least 1")
+    if args.decisions < 1:
+        parser.error("--decisions must be at least 1")
+    return args
+
+
+def main(model_path="trained_model", max_processes=10, n=15):
+    decisions = generate_real_decisions(
+        model_path=model_path, max_processes=max_processes, n=n
+    )
     api_key = os.environ.get("ANTHROPIC_API_KEY")
 
     if api_key:
@@ -99,4 +135,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    main(
+        model_path=args.model_path,
+        max_processes=args.max_processes,
+        n=args.decisions,
+    )
