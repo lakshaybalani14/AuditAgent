@@ -3,6 +3,7 @@ __pycache__/
 .venv/
 trained_model.zip
 training_metadata.json
+decision_log.explanation-preview.json
 *.monitor.csv
 evaluation_results.json
 dashboard/node_modules/

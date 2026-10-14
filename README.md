@@ -15,9 +15,9 @@ Priority Scheduling, Multilevel Feedback Queue) on a stream of fake
 processes. A Reinforcement Learning agent watches the live system state
 and decides, tick by tick, whether to switch algorithms or intervene
 (e.g. boost a starving process's priority) to keep average wait time low
-without letting anything starve. Every decision the RL agent makes is
-sent to Claude (Anthropic's LLM), which returns a plain-English
-explanation of why that decision made sense. A Next.js dashboard
+without letting anything starve. Decisions can be sent to Gemini or
+Claude for plain-English explanations; cloud use is opt-in and the default
+path makes no external API calls. A Next.js dashboard
 displays the live queue state and the decision-explanation feed.
 
 ## Run the project
@@ -41,8 +41,40 @@ Then open `http://localhost:3000`. The dashboard includes a sample
 `decision_log.json` so it has useful content before a model is trained. Run
 `python -m rl_agent.train` to train a DQN, then
 `python -m rl_agent.generate_decision_log` to replace the sample log with
-decisions from the saved model. To generate Claude explanations instead, set
-`ANTHROPIC_API_KEY` and run `python -m explainability.explainer`.
+decisions from the saved model.
+
+For a safe, offline preview of the explanation timeline, run
+`python -m explainability.explainer`. It writes random sample decisions to
+`decision_log.explanation-preview.json` and never replaces the live log. To show
+that preview in the dashboard, start Next.js with
+`DASHBOARD_USE_EXPLANATION_PREVIEW=1`. These entries have no cloud response;
+they exercise the dashboard's no-key fallback.
+
+To request Gemini explanations for sample decisions, first set
+`GEMINI_API_KEY` and then run
+`python -m explainability.explainer --provider gemini`. This sends up to five
+requests and uses your Gemini API quota. Use `--provider claude` with
+`ANTHROPIC_API_KEY` only if you want Claude. The default provider is offline;
+an existing output file is not replaced unless `--force` is provided.
+
+While the dashboard is running locally, **Run scheduler** starts a new
+decision-generation run through `POST /api/run`. The API looks for
+`trained_model.zip` or `trained_model` in the project root. To use a model at
+another path, set `SCHEDULER_MODEL_PATH` before starting the dashboard. The
+API reports a clear missing-model message when neither path exists, and it
+keeps the existing decision log if a run fails. Explanations are optional.
+To use Gemini during a real model run, put these entries in the ignored
+`dashboard/.env.local` file, then restart Next.js:
+
+```dotenv
+EXPLANATION_PROVIDER=gemini
+GEMINI_API_KEY=your_key_here
+GEMINI_MODEL=gemini-3.8-flash
+```
+
+The default `offline` provider makes no cloud API calls. Set
+`EXPLANATION_PROVIDER=claude` and `ANTHROPIC_API_KEY` only if your team needs
+Claude compatibility.
 
 ## Folder structure and ownership
 
@@ -55,7 +87,7 @@ agentic-scheduler/
 ├── rl_agent/             # Person B — RL agent, depends on simulator/
 │   ├── scheduler_env.py
 │   └── train.py
-├── explainability/        # Person C — Claude API layer
+├── explainability/        # Gemini/Claude explanation providers
 │   └── explainer.py
 ├── dashboard/             # Person C — Next.js frontend
 │   ├── pages/index.js
@@ -274,8 +306,8 @@ yet run end-to-end here.)
 
 ## `explainability/explainer.py`
 
-**Purpose:** Given one state + one action (from the RL agent), calls
-the Anthropic API and returns a plain-English explanation. No training,
+**Purpose:** Given one state + one action (from the RL agent), optionally calls
+the Gemini or Anthropic API and returns a plain-English explanation. No training,
 no machine learning — this file is entirely prompt design and API
 plumbing.
 
@@ -291,28 +323,25 @@ plumbing.
   say so honestly if the action looks questionable rather than
   rationalizing it. Being specific with exact numbers in the prompt
   produces materially better explanations than vague descriptions.
-- `explain_decision(state, action, client)`: calls
-  `client.messages.create(model="claude-sonnet-5", max_tokens=200, messages=[...])`,
-  extracts and concatenates all `type == "text"` blocks from the
-  response's content list (a response can contain multiple content
-  blocks; filtering by type rather than assuming position is required).
+- `explain_decision(state, action, client, provider)`: uses Google's
+  `google-genai` client when `provider="gemini"`, or the Anthropic client
+  when `provider="claude"`; rejects empty responses and reports provider
+  failures without losing the decision.
 - `generate_fake_decisions(n=5)`: produces `n` random
   `{"state": {...}, "action": int}` dicts with plausible random field
   values, matching the exact shape `get_state_summary()` produces. This
   exists so the explainability layer can be built and tested **before**
   the RL agent has finished training — swap this out for a real
   decision log later without changing anything else in the file.
-- `main()`: reads `ANTHROPIC_API_KEY` from the environment (raise a
-  clear error if missing), generates fake decisions, calls
-  `explain_decision` on each, prints each explanation, and writes the
-  full list (state + action + action_name + explanation per entry) to
-  `decision_log.json` — this exact file/shape is what the dashboard's
-  API route reads.
+- `main()`: defaults to offline fake decisions and writes them to a
+  separate preview file. Cloud use requires an explicit `--provider`
+  choice and its corresponding key. The preview file is only read by the
+  dashboard when `DASHBOARD_USE_EXPLANATION_PREVIEW=1` is set.
 
-**Expected behavior when run:** requires `ANTHROPIC_API_KEY` set and
-`anthropic` installed; prints 5 explanations and writes
-`decision_log.json`. (Needs your own API key — not run in this repo's
-build/test pass.)
+**Expected behavior when run:** with no provider selected, prints that it
+wrote five offline sample decisions to `decision_log.explanation-preview.json`.
+Selecting `--provider gemini` or `--provider claude` requires that provider's
+key and may use its API quota.
 
 ---
 
@@ -351,8 +380,8 @@ panel.
 
 ## `dashboard/components/DecisionFeed.js`
 
-**Purpose:** Displays the full list of logged decisions, each with its
-Claude-generated explanation — the centerpiece of the demo.
+**Purpose:** Displays the full list of logged decisions, each with an
+optional Gemini or Claude explanation — the centerpiece of the demo.
 
 **Build spec:**
 - React functional component `DecisionFeed({ decisions })`.
