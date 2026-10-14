@@ -16,12 +16,24 @@ from gymnasium import spaces
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "simulator"))
 from simulator_core import SimulatorCore  # noqa: E402
+from workload_profiles import (  # noqa: E402
+    normalize_workload_profiles,
+)
 
 
 class SchedulerEnv(gym.Env):
-    def __init__(self, max_processes=10, seed=None, scenario="mixed_cpu_io", workload_config=None):
+    def __init__(
+        self,
+        max_processes=10,
+        seed=None,
+        scenario="mixed_cpu_io",
+        workload_config=None,
+        workload_profiles=None,
+    ):
         super().__init__()
         self.max_processes = max_processes
+        self.workload_profiles = normalize_workload_profiles(workload_profiles)
+        self.current_workload_profile = None
         # Matches SimulatorCore.apply_action's 5 actions: 0=no change,
         # 1=Round Robin, 2=Priority, 3=MLFQ, 4=boost longest-waiting process.
         self.action_space = spaces.Discrete(5)
@@ -37,8 +49,29 @@ class SchedulerEnv(gym.Env):
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
-        self.sim.reset(seed=seed)
-        return self._state_to_array(), {}
+        if options is not None and not isinstance(options, dict):
+            raise TypeError("options must be a dictionary or None")
+        options = options or {}
+        requested_profile = options.get("workload_profile")
+        if requested_profile is not None:
+            if requested_profile not in self.workload_profiles:
+                raise ValueError(
+                    f"Profile {requested_profile!r} is not among configured "
+                    f"profiles: {self.workload_profiles}"
+                )
+            selected_profile = requested_profile
+        else:
+            selected_profile = self.workload_profiles[
+                int(self.np_random.integers(len(self.workload_profiles)))
+            ]
+
+        simulator_options = dict(options)
+        simulator_options["workload_profile"] = selected_profile
+        self.sim.reset(seed=seed, options=simulator_options)
+        self.current_workload_profile = selected_profile
+        return self._state_to_array(), {
+            "workload_profile": self.current_workload_profile
+        }
 
     def step(self, action):
         self.sim.apply_action(action)
@@ -48,7 +81,11 @@ class SchedulerEnv(gym.Env):
         reward = self._compute_reward(state, finished_a_process)
         terminated = self.sim.is_episode_done()
         truncated = False
-        info = {"avg_wait": state["avg_wait_time"], "is_starving": state["is_starving"]}
+        info = {
+            "avg_wait": state["avg_wait_time"],
+            "is_starving": state["is_starving"],
+            "workload_profile": self.current_workload_profile,
+        }
 
         return self._state_to_array(), reward, terminated, truncated, info
 
@@ -93,3 +130,4 @@ if __name__ == "__main__":
         total_reward += reward
         steps += 1
     print(f"Episode finished after {steps} steps. Total reward: {total_reward:.2f}")
+

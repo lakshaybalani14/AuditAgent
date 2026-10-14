@@ -2,62 +2,47 @@
 
 ## Current project status
 
-PR #2 is merged into main. It added configurable DQN training, saved experiment metadata and logs, policy evaluation against fixed baselines, and custom model paths for decision logging.
+PR #2 established configurable DQN training and evaluation. PR #4 delivered Person 1's process lifecycle, I/O blocking and wakeups, functional Round Robin, Priority, and MLFQ scheduling, seeded workloads, and scheduling metrics. PR #3 adds seven seeded synthetic profiles plus profile-aware RL training and matched-seed evaluation. This integration connects those profiles to SimulatorCore and generates real I/O requests for I/O-bound processes.
 
-The next work is to make simulator workloads more varied and realistic, implement distinct MLFQ behavior, then train and evaluate the DQN across workload profiles it has not seen during training.
+The simulator-to-agent loop is ready for model-training experiments. Training runs must use held-out seeds and report measured results before making performance claims.
 
 ## Four-person task split
 
-| Owner | Task | Main files or outputs | Dependencies |
+| Owner | Task | Main files or outputs | Status/dependencies |
 |---|---|---|---|
-| Person 1 — Simulator and OS behavior | Implement real MLFQ behavior; make scheduler actions change behavior as intended; expose an agreed, seeded interface for selecting a workload profile; report reliable process and scheduling metrics. | simulator/simulator_core.py and related simulator files | Agree on workload-profile and seed contract with Person 2 |
-| Person 2 — Workload profiles and data | Create reusable synthetic profiles: light, bursty arrivals, CPU-heavy, short-job-heavy, I/O-heavy, and mixed. Define the profile schema; optionally investigate licensed workload traces and how to map them into simulator processes. | A separate workload-generation module, profile fixtures, trace/license notes | Agree on profile names, fields, and seed behavior with Person 1 |
-| Person 3 — RL training and evaluation | Build on the merged training/evaluation tools. Let training select and record profiles; evaluate DQN and baselines on the same held-out workloads; report results by profile; review whether rewards match the project goals. | rl_agent/scheduler_env.py, rl_agent/train.py, rl_agent/evaluate.py, experiment reports | Can prepare selection, metadata, and report handling with fixtures. End-to-end runs depend on the Person 1 simulator interface and Person 2 profile generator |
-| Person 4 — Dashboard and explanations | Display experiment configuration, workload profile, policy metrics, and decisions; use mock reports until real experiment output is available; keep the dashboard usable without an Anthropic key. | Dashboard and explainability files | Shared, versioned run/decision-log schema; real data integration follows Person 3 output |
+| Person 1 — Simulator and OS behavior | MLFQ behavior, scheduler actions, seeded profile-aware reset, process lifecycle, I/O blocking/wakeup, and scheduling metrics. | simulator/simulator_core.py and related simulator files | Delivered in PR #4 and integrated with Person 3's profile generator and Gymnasium environment |
+| Person 2 — Workload data and validation | Investigate suitable external workload traces, data formats, and licenses; review synthetic profile assumptions and document limitations. | Trace source/license notes and workload review | Follow-up research |
+| Person 3 — RL training, profiles, and evaluation | Generate seeded profiles; select and record profiles during training; evaluate DQN and baselines on identical held-out workloads; report by profile and review reward behavior. | simulator/workload_profiles.py, rl_agent/scheduler_env.py, rl_agent/train.py, rl_agent/evaluate.py, docs/WORKLOAD_PROFILES.md | Profile-aware simulator and training/evaluation path integrated |
+| Person 4 — Dashboard and explanations | Display experiment configuration, workload profile, policy metrics, and decisions; keep the dashboard usable without an Anthropic key. | Dashboard and explainability files | Connect to reproducible experiment output and shared report schema |
 
-### Parallel work and dependencies
-
-~~~
-Person 1: Simulator and MLFQ ──────┐
-                                   ├──> Person 3: integrated RL training/evaluation
-Person 2: Workload profiles ───────┘
-Person 3: versioned run/report schema ──> Person 4: dashboard integration
-Person 4: can build against mock reports while the other work proceeds
-~~~
-
-Person 1 and Person 2 can work in parallel after agreeing on a small interface. Keep profile generation in its own module so Person 1 can integrate it into the simulator without both people editing the same implementation. Person 3 can prepare profile selection, metadata, and grouped reports using fixtures while the simulator work continues. Person 3 should wait for the agreed interface before wiring the final end-to-end path.
-
-The interface agreement should specify profile identifiers, process fields, seed behavior, and how a selected profile reaches a simulator episode. A seed should make a workload repeatable; training and evaluation should use separate seed sets.
+Person 2 can research traces while Person 4 builds against mock reports. Training can now use named profiles through the integrated simulator reset API.
 
 ## Recommended implementation order
 
-1. **Agree on contracts:** profile identifiers and process fields, seed handling, simulator state/action meanings, reward and metric definitions, and the run/report JSON schema.
-2. **Work in parallel:** Person 1 implements distinct simulator behavior and the profile-selection interface; Person 2 creates profile recipes and optional trace-import notes; Person 3 prepares RL-side profile selection/reporting with fixtures; Person 4 builds against mock run reports.
-3. **Integrate workloads:** connect the profile generator to the simulator and expose profile selection through SchedulerEnv.
-4. **Train and evaluate:** train across varied profiles; evaluate on held-out seeds/workloads using the same workloads for DQN and each baseline. Report results by profile and do not treat queue-age metrics as total completed-process waiting time.
-5. **Integrate and review:** connect actual reports to the dashboard, reconcile shared schemas, record reproducible results, and prepare the demo/release.
+1. Maintain the shared contract for profile identifiers, process fields, seed handling, simulator actions, reward and metric definitions, and run/report JSON.
+2. Run reproducible training across varied profiles.
+3. Evaluate DQN and baselines on identical held-out seeds/workloads. Report results by profile and distinguish ready-queue age samples from completed-process total waiting time.
+4. Connect actual reports to the dashboard, reconcile schemas, record reproducible results, and prepare the demo.
 
-MLFQ must have behavior distinct from Round Robin before its baseline comparison can be interpreted. Longer training alone does not guarantee better performance; reward and simulator behavior must first represent the intended scheduling goals.
+MLFQ now has behavior distinct from Round Robin through queues, demotion, and periodic boosts. Longer training alone does not guarantee better performance; reward and simulator behavior must represent the intended scheduling goals.
 
 ## Branch and pull-request process
 
-1. Create each feature branch from the latest main.
-2. Keep each branch focused on its owner's files and responsibility. Coordinate before changing a shared schema or interface.
-3. Push work to the feature branch and open a pull request targeting main. Do not push feature work directly to main.
-4. In each PR, explain the outcome, files changed, interface changes, verification performed, and follow-up work.
+1. Create feature branches from the latest main.
+2. Keep branches focused and coordinate shared interfaces.
+3. Open pull requests targeting main.
+4. Explain outcomes, changed files, interfaces, verification, and follow-up work.
 5. Review cross-component contracts, simulation semantics, reproducibility, and evidence for performance claims.
-6. Merge after review and required checks pass. PR #2 received static review; no CI status checks or workflow runs were reported for it. Add automated checks and configure branch protection before relying on required-review enforcement.
+6. Merge after review and required checks pass. The repository currently has no reported CI workflow/status checks; add automated checks and configure branch protection before relying on required-review enforcement.
 
 ## Definition of done
 
-A task is ready to merge when:
-
-- Its behavior matches the shared contract and documentation.
-- It includes focused tests or reproducible manual verification appropriate to the change.
-- It does not introduce unreported changes to the state, action, workload, or run-log schema.
+- Behavior matches the shared contract and documentation.
+- Focused tests or reproducible manual verification pass.
+- State, action, workload, and run-log schema changes are reported.
 - Training and benchmark changes record configuration, seed, and workload split.
 - External traces have documented sources and license notes; no credentials or large raw datasets are committed.
-- The PR states what has actually been measured and does not present a hypothesis as a result.
+- Performance claims reflect reproduced measurements.
 
 ## Release and demo checklist
 
@@ -65,5 +50,6 @@ A task is ready to merge when:
 - Reproduce benchmark reports from documented commands and seeds.
 - Verify saved logs and dashboard schema compatibility.
 - Ensure the dashboard can show a run without an Anthropic key.
-- Add citations and license notes for any external workload traces.
-- Update the project write-up only with results that the benchmark reproduces.
+- Cite and license any external workload traces.
+- Update project claims only with reproducible results.
+

@@ -4,6 +4,7 @@ Train a DQN against SchedulerEnv and record the experiment settings.
 Run from the repository root:
     python -m rl_agent.train
     python -m rl_agent.train --timesteps 50000 --seed 123 --output-dir runs/experiment-1
+    python -m rl_agent.train --workload-profiles all --timesteps 50000
 
 A positional timestep count remains supported for compatibility:
     python -m rl_agent.train 50000
@@ -26,6 +27,7 @@ from stable_baselines3.common.monitor import Monitor
 
 sys.path.insert(0, os.path.dirname(__file__))
 from scheduler_env import SchedulerEnv  # noqa: E402
+from workload_profiles import normalize_workload_profiles  # noqa: E402
 
 
 class ProgressCallback(BaseCallback):
@@ -43,6 +45,7 @@ class ProgressCallback(BaseCallback):
             info = infos[0] if infos else {}
             print(
                 f"[step {self.num_timesteps}] "
+                f"profile={info.get('workload_profile')} "
                 f"avg_queue_age={info.get('avg_wait')} "
                 f"is_starving={info.get('is_starving')}"
             )
@@ -57,8 +60,9 @@ def main(
     output_dir=".",
     max_processes=10,
     print_every=1000,
+    workload_profiles=None,
 ):
-    """Train one model and save its checkpoint, Monitor log, and metadata."""
+    """Train one model and save its checkpoint, logs, and metadata."""
     if total_timesteps <= 0:
         raise ValueError("total_timesteps must be greater than zero")
     if learning_rate <= 0:
@@ -68,18 +72,22 @@ def main(
     if max_processes <= 0:
         raise ValueError("max_processes must be greater than zero")
 
+    selected_profiles = normalize_workload_profiles(workload_profiles)
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     model_path = output_path / "trained_model"
     monitor_path = output_path / "training.monitor.csv"
 
-    # Seed NumPy for library-side behavior; Gymnasium forwards the SB3 seed
-    # through SchedulerEnv.reset to SimulatorCore's dedicated workload RNG.
+    # Gymnasium forwards the DQN seed to the simulator on the first reset.
     np.random.seed(seed)
 
     env = Monitor(
-        SchedulerEnv(max_processes=max_processes),
+        SchedulerEnv(
+            max_processes=max_processes,
+            workload_profiles=selected_profiles,
+        ),
         filename=str(monitor_path),
+        info_keywords=("workload_profile",),
     )
     model = DQN(
         "MlpPolicy",
@@ -108,6 +116,8 @@ def main(
             "seed": seed,
             "max_processes": max_processes,
             "progress_print_every": print_every,
+            "workload_profiles": list(selected_profiles),
+            "profile_sampling": "uniformly selected at each episode reset",
         },
         "artifacts": {
             "model": str(model_path.with_suffix(".zip")),
@@ -120,9 +130,10 @@ def main(
             "stable_baselines3": stable_baselines3.__version__,
         },
         "notes": [
-            "The simulator creates synthetic workloads.",
-            "The seed initializes Gymnasium workload resets and the DQN.",
+            "The simulator uses synthetic workloads.",
+            "The seed initializes the DQN and reproducible workload generation.",
             "Reproducibility can still depend on the machine and library versions.",
+            "Named profiles require the profile-aware SimulatorCore reset interface.",
         ],
     }
     metadata_path = output_path / "training_metadata.json"
@@ -149,6 +160,11 @@ def parse_args():
     parser.add_argument("--max-processes", type=int, default=10)
     parser.add_argument("--print-every", type=int, default=1000)
     parser.add_argument(
+        "--workload-profiles",
+        default="legacy_random",
+        help="Comma-separated profile names or 'all' (default: legacy_random).",
+    )
+    parser.add_argument(
         "--output-dir",
         default=".",
         help="Directory for the model and run artifacts (default: project root).",
@@ -164,6 +180,12 @@ def parse_args():
         if args.steps_positional is not None
         else 100_000
     )
+    try:
+        args.resolved_workload_profiles = normalize_workload_profiles(
+            args.workload_profiles
+        )
+    except ValueError as exc:
+        parser.error(str(exc))
     return args
 
 
@@ -177,4 +199,6 @@ if __name__ == "__main__":
         output_dir=args.output_dir,
         max_processes=args.max_processes,
         print_every=args.print_every,
+        workload_profiles=args.resolved_workload_profiles,
     )
+

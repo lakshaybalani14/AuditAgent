@@ -52,6 +52,43 @@ class SchedulerEnvironmentTests(unittest.TestCase):
         finally:
             env.close()
 
+    def test_selected_profile_reaches_simulator_and_is_reported(self):
+        env = SchedulerEnv(max_processes=20, workload_profiles=("io_heavy",))
+        try:
+            _, info = env.reset(
+                seed=741,
+                options={"workload_profile": "io_heavy"},
+            )
+            self.assertEqual(info["workload_profile"], "io_heavy")
+            self.assertEqual(env.sim.current_workload_profile, "io_heavy")
+            processes = env.sim.pending + env.sim.ready_queue
+            self.assertTrue(any(process.io_requests for process in processes))
+            self.assertTrue(
+                all(
+                    process.io_requests
+                    for process in processes
+                    if process.is_io_bound and process.burst_time > 1
+                )
+            )
+        finally:
+            env.close()
+
+    def test_profile_sampling_is_reproducible_from_environment_seed(self):
+        env = SchedulerEnv(max_processes=10, workload_profiles="all")
+        try:
+            _, first_info = env.reset(seed=884)
+            _, second_info = env.reset(seed=884)
+            self.assertEqual(
+                first_info["workload_profile"],
+                second_info["workload_profile"],
+            )
+            self.assertEqual(
+                first_info["workload_profile"],
+                env.sim.current_workload_profile,
+            )
+        finally:
+            env.close()
+
     def test_all_action_space_actions_execute_and_observations_stay_valid(self):
         env = make_env()
         try:
@@ -97,3 +134,4 @@ class SchedulerEnvironmentTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
