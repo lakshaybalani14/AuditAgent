@@ -11,7 +11,6 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
-import random
 import statistics
 import sys
 
@@ -31,11 +30,7 @@ def _stddev(values):
 
 def run_episode(env, policy_name, action_for_step, seed, max_steps):
     """Run one policy on the synthetic workload generated from seed."""
-    # The current simulator uses Python's random module rather than Gym's
-    # per-environment RNG. Seeding immediately before reset makes the
-    # generated batch match across policies for the same episode seed.
-    random.seed(seed)
-    observation, _ = env.reset()
+    observation, _ = env.reset(seed=seed)
 
     total_reward = 0.0
     queue_age_samples = []
@@ -148,7 +143,7 @@ def evaluate(model_path, episodes=30, seed=42, max_processes=10, max_steps=10_00
         ),
         "matched_workload_note": (
             "Each policy is run with the same episode seed. This matches the "
-            "current synthetic batch generator, which uses Python's random module."
+            "synthetic batch generator's isolated random stream."
         ),
         "policies": results,
     }

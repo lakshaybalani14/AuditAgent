@@ -15,7 +15,6 @@ import json
 import os
 from pathlib import Path
 import platform
-import random
 import sys
 
 import gymnasium
@@ -74,9 +73,8 @@ def main(
     model_path = output_path / "trained_model"
     monitor_path = output_path / "training.monitor.csv"
 
-    # SimulatorCore currently uses Python's module-level random generator
-    # to create process batches, so seed it here as well as the DQN.
-    random.seed(seed)
+    # Seed NumPy for library-side behavior; Gymnasium forwards the SB3 seed
+    # through SchedulerEnv.reset to SimulatorCore's dedicated workload RNG.
     np.random.seed(seed)
 
     env = Monitor(
@@ -123,7 +121,7 @@ def main(
         },
         "notes": [
             "The simulator creates synthetic workloads.",
-            "The seed initializes Python workload randomness and the DQN.",
+            "The seed initializes Gymnasium workload resets and the DQN.",
             "Reproducibility can still depend on the machine and library versions.",
         ],
     }
