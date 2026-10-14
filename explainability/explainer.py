@@ -1,19 +1,19 @@
 """
-explainer.py — Given one state + one action from the RL agent, calls
-the Anthropic API and returns a plain-English explanation.
+explainer.py — Explain one scheduler decision with Gemini or Claude.
 
 No training, no ML — this file is entirely prompt design and API
 plumbing.
 
 Run from the project root:
-    ANTHROPIC_API_KEY=sk-... python -m explainability.explainer
+    python -m explainability.explainer                         # offline preview
+    GEMINI_API_KEY=... python -m explainability.explainer --provider gemini
 """
 
+import argparse
 import json
 import os
 import random
-
-import anthropic
+from pathlib import Path
 
 # Must match SimulatorCore.apply_action's meanings exactly.
 ACTION_NAMES = {
@@ -46,17 +46,49 @@ def build_prompt(state, action):
     )
 
 
-def explain_decision(state, action, client):
+def explain_decision(state, action, client, provider="gemini"):
     prompt = build_prompt(state, action)
-    response = client.messages.create(
-        model="claude-3-5-sonnet-20241022",
-        max_tokens=200,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    # A response can contain multiple content blocks — filter by type
-    # rather than assuming position.
-    text_blocks = [block.text for block in response.content if block.type == "text"]
-    return "".join(text_blocks).strip()
+    if provider == "gemini":
+        response = client.models.generate_content(
+            model=os.environ.get("GEMINI_MODEL", "gemini-3.8-flash"),
+            contents=prompt,
+        )
+        explanation = (response.text or "").strip()
+    elif provider == "claude":
+        response = client.messages.create(
+            model=os.environ.get("CLAUDE_MODEL", "claude-3-5-sonnet-20241022"),
+            max_tokens=200,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text_blocks = [block.text for block in response.content if block.type == "text"]
+        explanation = "".join(text_blocks).strip()
+    else:
+        raise ValueError(f"Unsupported explanation provider: {provider}")
+
+    if not explanation:
+        raise ValueError("The explanation provider returned an empty response.")
+    return explanation
+
+
+def create_client(provider):
+    """Create an explicitly requested provider client; never auto-select a paid API."""
+    if provider == "gemini":
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            raise EnvironmentError("GEMINI_API_KEY is required when --provider gemini is selected.")
+        from google import genai
+
+        return genai.Client(api_key=api_key)
+    if provider == "claude":
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise EnvironmentError("ANTHROPIC_API_KEY is required when --provider claude is selected.")
+        import anthropic
+
+        return anthropic.Anthropic(api_key=api_key)
+    if provider == "offline":
+        return None
+    raise ValueError(f"Unsupported explanation provider: {provider}")
 
 
 def generate_fake_decisions(n=5):
@@ -83,33 +115,86 @@ def generate_fake_decisions(n=5):
     return decisions
 
 
-def main():
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise EnvironmentError(
-            "ANTHROPIC_API_KEY is not set. Export it before running this script, "
-            "e.g.: export ANTHROPIC_API_KEY=sk-ant-..."
-        )
-
-    client = anthropic.Anthropic(api_key=api_key)
-    decisions = generate_fake_decisions(n=5)
+def build_decision_log(n=5, client=None, provider="offline"):
+    """Build sample entries and optionally request explanations from a provider."""
+    decisions = generate_fake_decisions(n=n)
 
     log = []
     for d in decisions:
-        explanation = explain_decision(d["state"], d["action"], client)
         entry = {
             "state": d["state"],
             "action": d["action"],
             "action_name": ACTION_NAMES[d["action"]],
-            "explanation": explanation,
+            "source": "sample_preview",
+            "explanation": None,
+            "explanation_status": "not_configured",
         }
+        if client is not None:
+            try:
+                entry["explanation"] = explain_decision(
+                    d["state"], d["action"], client, provider=provider
+                )
+                entry["explanation_status"] = "available"
+            except Exception as error:
+                entry["explanation_status"] = "unavailable"
+                entry["explanation_error"] = f"{provider.title()} request failed ({type(error).__name__})."
         log.append(entry)
-        print(f"[t={d['state']['time']}] {ACTION_NAMES[d['action']]}: {explanation}")
+        if entry["explanation"]:
+            print(f"[t={d['state']['time']}] {ACTION_NAMES[d['action']]}: {entry['explanation']}")
+        elif entry["explanation_status"] == "unavailable":
+            print(f"[t={d['state']['time']}] {provider.title()} explanation unavailable; keeping the decision.")
 
-    with open("decision_log.json", "w") as f:
-        json.dump(log, f, indent=2)
-    print(f"\nWrote {len(log)} decisions to decision_log.json")
+    return log
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Create sample decision entries to preview the dashboard explanation flow."
+    )
+    parser.add_argument(
+        "--output",
+        default="decision_log.explanation-preview.json",
+        help="Output path (default: decision_log.explanation-preview.json; separate from the live decision log).",
+    )
+    parser.add_argument("--decisions", type=int, default=5, help="Number of sample decisions (default: 5).")
+    parser.add_argument(
+        "--provider",
+        choices=("offline", "gemini", "claude"),
+        default="offline",
+        help="Explanation provider. Offline is the safe default; cloud providers may consume API credits.",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Allow replacing the selected output file.",
+    )
+    args = parser.parse_args()
+    if args.decisions < 1:
+        parser.error("--decisions must be at least 1")
+    return args
+
+
+def main(output_path="decision_log.explanation-preview.json", n=5, provider="offline", force=False):
+    output = Path(output_path)
+    if output.exists() and not force:
+        raise FileExistsError(
+            f"{output} already exists. Choose another --output path or pass --force to replace it."
+        )
+
+    client = create_client(provider)
+
+    log = build_decision_log(n=n, client=client, provider=provider)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w" if force else "x", encoding="utf-8") as output_file:
+        json.dump(log, output_file, indent=2)
+    print(f"\nWrote {len(log)} sample decisions to {output}")
 
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    main(
+        output_path=args.output,
+        n=args.decisions,
+        provider=args.provider,
+        force=args.force,
+    )

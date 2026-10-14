@@ -1,16 +1,34 @@
 import fs from "fs";
 import path from "path";
 
+const projectRoot = path.resolve(process.cwd(), "..");
+const useExplanationPreview =
+  process.env.NODE_ENV !== "production" &&
+  process.env.DASHBOARD_USE_EXPLANATION_PREVIEW === "1";
+const decisionsPath = path.join(
+  projectRoot,
+  useExplanationPreview ? "decision_log.explanation-preview.json" : "decision_log.json"
+);
+
 export default function handler(req, res) {
-  const filePath = path.join(process.cwd(), "..", "decision_log.json");
+  if (req.method !== "GET") {
+    res.setHeader("Allow", "GET");
+    return res.status(405).json({ error: "Method not allowed." });
+  }
 
   try {
-    const raw = fs.readFileSync(filePath, "utf-8");
-    const decisions = JSON.parse(raw);
-    res.status(200).json(decisions);
-  } catch (err) {
-    // decision_log.json doesn't exist yet (explainer.py hasn't been run) —
-    // render an empty state gracefully instead of crashing.
-    res.status(200).json([]);
+    const decisions = JSON.parse(fs.readFileSync(decisionsPath, "utf-8"));
+    if (!Array.isArray(decisions)) {
+      return res.status(500).json({ error: "Decision log must contain a JSON array." });
+    }
+    return res.status(200).json(decisions);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return res.status(200).json([]);
+    }
+    if (error instanceof SyntaxError) {
+      return res.status(500).json({ error: "Decision log contains invalid JSON." });
+    }
+    return res.status(500).json({ error: "Could not read the decision log." });
   }
 }
