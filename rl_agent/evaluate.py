@@ -86,6 +86,14 @@ def run_episode(env, policy_name, action_for_step, workload_profile, seed, max_s
     turnaround_times = [process.turnaround_time for process in completed]
     response_times = [process.response_time for process in completed]
     elapsed_time = env.sim.time
+    processes_seen = (
+        list(completed)
+        + list(env.sim.pending)
+        + list(env.sim.ready_queue)
+        + [event[2] for event in env.sim.blocked]
+    )
+    if env.sim.running_process is not None:
+        processes_seen.append(env.sim.running_process)
 
     return {
         "policy": policy_name,
@@ -108,7 +116,7 @@ def run_episode(env, policy_name, action_for_step, workload_profile, seed, max_s
             len(completed) / elapsed_time if elapsed_time else 0.0
         ),
         "cpu_utilization": (
-            sum(process.cpu_execution_time for process in completed) / elapsed_time
+            sum(process.cpu_execution_time for process in processes_seen) / elapsed_time
             if elapsed_time else 0.0
         ),
         "action_counts": {

@@ -5,6 +5,33 @@ from rl_agent.scheduler_env import SchedulerEnv
 
 
 class EvaluationMetricsTests(unittest.TestCase):
+    def test_partial_episode_cpu_utilization_includes_unfinished_processes(self):
+        env = SchedulerEnv(max_processes=3, workload_profiles=("short_job_heavy",))
+        try:
+            result = run_episode(
+                env,
+                "Round Robin",
+                lambda observation, step: 1 if step == 0 else 0,
+                "short_job_heavy",
+                seed=10,
+                max_steps=2,
+            )
+            processes = (
+                env.sim.completed
+                + env.sim.pending
+                + env.sim.ready_queue
+                + [event[2] for event in env.sim.blocked]
+            )
+            if env.sim.running_process is not None:
+                processes.append(env.sim.running_process)
+            expected = sum(process.cpu_execution_time for process in processes) / env.sim.time
+        finally:
+            env.close()
+
+        self.assertFalse(result["episode_terminated"])
+        self.assertGreater(expected, 0.0)
+        self.assertAlmostEqual(result["cpu_utilization"], expected)
+
     def test_episode_reports_process_outcomes_and_action_counts(self):
         env = SchedulerEnv(max_processes=5, workload_profiles=("io_heavy",))
         try:
