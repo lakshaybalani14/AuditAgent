@@ -14,6 +14,7 @@ from scheduler_algorithms import (
     DEFAULT_MLFQ_QUANTUMS,
 )
 from workload_generator import generate_workload
+from workload_profiles import generate_process_specs, normalize_workload_profiles
 
 ALGO_ROUND_ROBIN = 0
 ALGO_PRIORITY = 1
@@ -41,6 +42,7 @@ class SimulatorCore:
         self.scenario = scenario
         self.workload_config = dict(workload_config or {})
         self._rng = random.Random(seed)
+        self.current_workload_profile = None
         if not self.mlfq_quantums or any(
             not isinstance(value, int) or isinstance(value, bool) or value <= 0
             for value in self.mlfq_quantums
@@ -67,14 +69,31 @@ class SimulatorCore:
         self.running_level = None
         self.reset()
 
-    def reset(self, seed=None):
+    def reset(self, seed=None, options=None):
         if seed is not None:
             self.seed = seed
             self._rng.seed(seed)
+        if options is not None and not isinstance(options, dict):
+            raise TypeError("options must be a dictionary or None")
+        options = options or {}
+        requested_profile = options.get("workload_profile")
+        if requested_profile is None:
+            self.current_workload_profile = None
+            workload = self._generate_process_batch()
+        else:
+            self.current_workload_profile = normalize_workload_profiles(
+                requested_profile
+            )[0]
+            specs = generate_process_specs(
+                self.current_workload_profile,
+                self.max_processes,
+                self._rng,
+            )
+            workload = [Process(**spec) for spec in specs]
         self.time = 0
         self.current_algo = ALGO_ROUND_ROBIN
         self.ready_queue = []
-        self.pending = self._generate_process_batch()
+        self.pending = sorted(workload, key=lambda process: process.arrival_time)
         self.completed = []
         self.blocked = []
         self._io_event_sequence = 0
@@ -335,3 +354,4 @@ if __name__ == "__main__":
     print(
         f"\nDone after {ticks} steps, {len(simulator.completed)} processes completed."
     )
+

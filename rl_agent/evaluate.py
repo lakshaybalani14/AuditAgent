@@ -3,7 +3,7 @@ Evaluate a saved DQN against fixed scheduler choices on matched workloads.
 
 Run from the repository root:
     python -m rl_agent.evaluate --model-path trained_model.zip
-    python -m rl_agent.evaluate --episodes 50 --seed 100 --output evaluation_results.json
+    python -m rl_agent.evaluate --workload-profiles all --episodes 30 --seed 100
 """
 
 import argparse
@@ -18,6 +18,7 @@ from stable_baselines3 import DQN
 
 sys.path.insert(0, os.path.dirname(__file__))
 from scheduler_env import SchedulerEnv  # noqa: E402
+from workload_profiles import normalize_workload_profiles  # noqa: E402
 
 
 def _mean(values):
@@ -28,9 +29,13 @@ def _stddev(values):
     return statistics.stdev(values) if len(values) > 1 else 0.0
 
 
-def run_episode(env, policy_name, action_for_step, seed, max_steps):
-    """Run one policy on the synthetic workload generated from seed."""
-    observation, _ = env.reset(seed=seed)
+def run_episode(env, policy_name, action_for_step, workload_profile, seed, max_steps):
+    """Run one policy on one reproducible synthetic workload."""
+    # Resetting the environment with this seed reproduces the workload.
+    observation, _ = env.reset(
+        seed=seed,
+        options={"workload_profile": workload_profile},
+    )
 
     total_reward = 0.0
     queue_age_samples = []
@@ -55,6 +60,7 @@ def run_episode(env, policy_name, action_for_step, seed, max_steps):
 
     return {
         "policy": policy_name,
+        "workload_profile": workload_profile,
         "seed": seed,
         "episode_return": total_reward,
         "episode_steps": steps,
@@ -86,7 +92,14 @@ def summarize_runs(runs):
     }
 
 
-def evaluate(model_path, episodes=30, seed=42, max_processes=10, max_steps=10_000):
+def evaluate(
+    model_path,
+    episodes=30,
+    seed=42,
+    max_processes=10,
+    max_steps=10_000,
+    workload_profiles=None,
+):
     if episodes <= 0:
         raise ValueError("episodes must be greater than zero")
     if max_processes <= 0:
@@ -94,8 +107,12 @@ def evaluate(model_path, episodes=30, seed=42, max_processes=10, max_steps=10_00
     if max_steps <= 0:
         raise ValueError("max_steps must be greater than zero")
 
+    selected_profiles = normalize_workload_profiles(workload_profiles)
     model = DQN.load(model_path)
-    env = SchedulerEnv(max_processes=max_processes)
+    env = SchedulerEnv(
+        max_processes=max_processes,
+        workload_profiles=selected_profiles,
+    )
     policies = {
         "DQN": lambda observation, step: model.predict(
             observation, deterministic=True
@@ -108,21 +125,29 @@ def evaluate(model_path, episodes=30, seed=42, max_processes=10, max_steps=10_00
     results = {}
     try:
         for policy_name, action_for_step in policies.items():
-            runs = []
-            for episode_index in range(episodes):
-                episode_seed = seed + episode_index
-                runs.append(
-                    run_episode(
-                        env,
-                        policy_name,
-                        action_for_step,
-                        episode_seed,
-                        max_steps,
+            all_runs = []
+            by_profile = {}
+            for profile_name in selected_profiles:
+                profile_runs = []
+                for episode_index in range(episodes):
+                    episode_seed = seed + episode_index
+                    profile_runs.append(
+                        run_episode(
+                            env,
+                            policy_name,
+                            action_for_step,
+                            profile_name,
+                            episode_seed,
+                            max_steps,
+                        )
                     )
-                )
+                by_profile[profile_name] = summarize_runs(profile_runs)
+                all_runs.extend(profile_runs)
+
             results[policy_name] = {
-                "summary": summarize_runs(runs),
-                "runs": runs,
+                "summary": summarize_runs(all_runs),
+                "by_profile": by_profile,
+                "runs": all_runs,
             }
     finally:
         env.close()
@@ -130,20 +155,21 @@ def evaluate(model_path, episodes=30, seed=42, max_processes=10, max_steps=10_00
     return {
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
         "model_path": str(model_path),
-        "workload_source": "synthetic SimulatorCore process batches",
+        "workload_source": "seeded synthetic process profiles",
         "configuration": {
-            "episodes": episodes,
+            "episodes_per_profile": episodes,
             "first_seed": seed,
             "max_processes": max_processes,
             "max_steps_per_episode": max_steps,
+            "workload_profiles": list(selected_profiles),
         },
         "metrics_note": (
             "Queue-age metrics are sampled from the current ready-queue state. "
             "They are not completed-process total waiting times."
         ),
         "matched_workload_note": (
-            "Each policy is run with the same episode seed. This matches the "
-            "synthetic batch generator's isolated random stream."
+            "Each policy is evaluated on the same profile and episode seeds. "
+            "Training and evaluation should use separate seed ranges."
         ),
         "policies": results,
     }
@@ -158,8 +184,20 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--max-processes", type=int, default=10)
     parser.add_argument("--max-steps", type=int, default=10_000)
+    parser.add_argument(
+        "--workload-profiles",
+        default="legacy_random",
+        help="Comma-separated profile names or 'all' (default: legacy_random).",
+    )
     parser.add_argument("--output", default="evaluation_results.json")
-    return parser.parse_args()
+    args = parser.parse_args()
+    try:
+        args.resolved_workload_profiles = normalize_workload_profiles(
+            args.workload_profiles
+        )
+    except ValueError as exc:
+        parser.error(str(exc))
+    return args
 
 
 if __name__ == "__main__":
@@ -170,6 +208,7 @@ if __name__ == "__main__":
         seed=args.seed,
         max_processes=args.max_processes,
         max_steps=args.max_steps,
+        workload_profiles=args.resolved_workload_profiles,
     )
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -183,3 +222,11 @@ if __name__ == "__main__":
             f"mean_queue_age={summary['mean_observed_queue_age_ticks']:.2f}, "
             f"starvation_steps={summary['mean_starvation_steps']:.2f}"
         )
+        for profile_name, profile_summary in result["by_profile"].items():
+            print(
+                f"  {profile_name}: "
+                f"mean_return={profile_summary['mean_episode_return']:.2f}, "
+                f"mean_queue_age="
+                f"{profile_summary['mean_observed_queue_age_ticks']:.2f}"
+            )
+
