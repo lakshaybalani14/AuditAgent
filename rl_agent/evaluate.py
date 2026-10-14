@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import statistics
 import sys
+from collections import Counter
 
 from stable_baselines3 import DQN
 
@@ -29,6 +30,24 @@ def _stddev(values):
     return statistics.stdev(values) if len(values) > 1 else 0.0
 
 
+ACTION_NAMES = {
+    0: "no_change",
+    1: "round_robin",
+    2: "priority",
+    3: "mlfq",
+    4: "boost_longest_waiting",
+}
+
+
+def _percentile_95(values):
+    """Return the nearest-rank 95th percentile, or zero for no observations."""
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    index = max(0, (95 * len(ordered) + 99) // 100 - 1)
+    return float(ordered[index])
+
+
 def run_episode(env, policy_name, action_for_step, workload_profile, seed, max_steps):
     """Run one policy on one reproducible synthetic workload."""
     # Resetting the environment with this seed reproduces the workload.
@@ -41,11 +60,15 @@ def run_episode(env, policy_name, action_for_step, workload_profile, seed, max_s
     queue_age_samples = []
     max_queue_age_samples = []
     starvation_steps = 0
+    action_counts = Counter()
     terminated = False
     steps = 0
 
     while not terminated and steps < max_steps:
         action = int(action_for_step(observation, steps))
+        if action not in ACTION_NAMES:
+            raise ValueError(f"Policy selected unknown action: {action}")
+        action_counts[ACTION_NAMES[action]] += 1
         observation, reward, terminated, truncated, info = env.step(action)
         total_reward += float(reward)
         steps += 1
@@ -58,6 +81,20 @@ def run_episode(env, policy_name, action_for_step, workload_profile, seed, max_s
         if truncated:
             break
 
+    completed = env.sim.completed
+    waiting_times = [process.waiting_time for process in completed]
+    turnaround_times = [process.turnaround_time for process in completed]
+    response_times = [process.response_time for process in completed]
+    elapsed_time = env.sim.time
+    processes_seen = (
+        list(completed)
+        + list(env.sim.pending)
+        + list(env.sim.ready_queue)
+        + [event[2] for event in env.sim.blocked]
+    )
+    if env.sim.running_process is not None:
+        processes_seen.append(env.sim.running_process)
+
     return {
         "policy": policy_name,
         "workload_profile": workload_profile,
@@ -67,13 +104,34 @@ def run_episode(env, policy_name, action_for_step, workload_profile, seed, max_s
         "mean_observed_queue_age_ticks": _mean(queue_age_samples),
         "max_observed_queue_age_ticks": max(max_queue_age_samples, default=0.0),
         "starvation_steps": starvation_steps,
-        "processes_completed": len(env.sim.completed),
+        "processes_completed": len(completed),
+        "process_completion_rate": (
+            len(completed) / env.max_processes if env.max_processes else 0.0
+        ),
+        "mean_process_waiting_time_ticks": _mean(waiting_times),
+        "p95_process_waiting_time_ticks": _percentile_95(waiting_times),
+        "mean_process_turnaround_time_ticks": _mean(turnaround_times),
+        "mean_process_response_time_ticks": _mean(response_times),
+        "throughput_processes_per_tick": (
+            len(completed) / elapsed_time if elapsed_time else 0.0
+        ),
+        "cpu_utilization": (
+            sum(process.cpu_execution_time for process in processes_seen) / elapsed_time
+            if elapsed_time else 0.0
+        ),
+        "action_counts": {
+            name: action_counts.get(name, 0) for name in ACTION_NAMES.values()
+        },
         "episode_terminated": bool(terminated),
         "hit_step_limit": not terminated and steps >= max_steps,
     }
 
 
 def summarize_runs(runs):
+    action_counts = Counter()
+    for run in runs:
+        action_counts.update(run.get("action_counts", {}))
+    total_actions = sum(action_counts.values())
     return {
         "episodes": len(runs),
         "mean_episode_return": _mean([run["episode_return"] for run in runs]),
@@ -89,6 +147,34 @@ def summarize_runs(runs):
         "mean_processes_completed": _mean(
             [run["processes_completed"] for run in runs]
         ),
+        "mean_process_completion_rate": _mean(
+            [run.get("process_completion_rate", 0.0) for run in runs]
+        ),
+        "mean_process_waiting_time_ticks": _mean(
+            [run.get("mean_process_waiting_time_ticks", 0.0) for run in runs]
+        ),
+        "mean_p95_process_waiting_time_ticks": _mean(
+            [run.get("p95_process_waiting_time_ticks", 0.0) for run in runs]
+        ),
+        "mean_process_turnaround_time_ticks": _mean(
+            [run.get("mean_process_turnaround_time_ticks", 0.0) for run in runs]
+        ),
+        "mean_process_response_time_ticks": _mean(
+            [run.get("mean_process_response_time_ticks", 0.0) for run in runs]
+        ),
+        "mean_throughput_processes_per_tick": _mean(
+            [run.get("throughput_processes_per_tick", 0.0) for run in runs]
+        ),
+        "mean_cpu_utilization": _mean(
+            [run.get("cpu_utilization", 0.0) for run in runs]
+        ),
+        "action_counts": {
+            name: action_counts.get(name, 0) for name in ACTION_NAMES.values()
+        },
+        "action_fractions": {
+            name: action_counts.get(name, 0) / total_actions if total_actions else 0.0
+            for name in ACTION_NAMES.values()
+        },
     }
 
 
@@ -165,7 +251,8 @@ def evaluate(
         },
         "metrics_note": (
             "Queue-age metrics are sampled from the current ready-queue state. "
-            "They are not completed-process total waiting times."
+            "Completed-process waiting time is accumulated while READY; turnaround "
+            "includes CPU and I/O time. CPU utilization uses simulated time from 0."
         ),
         "matched_workload_note": (
             "Each policy is evaluated on the same profile and episode seeds. "
