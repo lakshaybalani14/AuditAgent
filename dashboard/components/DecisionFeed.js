@@ -20,7 +20,7 @@ export default function DecisionFeed({ decisions = [], loading }) {
   return (
     <section className="panel decision-panel">
       <div className="panel-heading">
-        <div><p className="eyebrow">AGENT ACTIVITY</p><h3>Decision timeline</h3></div>
+        <div><p className="eyebrow">FULL RUN HISTORY</p><h3>Decision log</h3></div>
         <span className="feed-count">{decisions.length} events</span>
       </div>
       {isSamplePreview && <div className="sample-report-banner" role="status"><strong>Sample decisions</strong><span>Generated preview data; this is not a trained agent run.</span></div>}

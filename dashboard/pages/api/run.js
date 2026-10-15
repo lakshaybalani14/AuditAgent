@@ -10,8 +10,11 @@ const MAX_OUTPUT_LENGTH = 4000;
 const RUN_TIMEOUT_MS = 10 * 60 * 1000;
 
 function publicRunState() {
-  if (!currentRun) return { status: "idle", message: "" };
+  const projectRoot = path.resolve(process.cwd(), "..");
+  const modelAvailable = Boolean(findModel(projectRoot));
+  if (!currentRun) return { status: "idle", message: "", modelAvailable };
   return {
+    modelAvailable,
     id: currentRun.id,
     status: currentRun.status,
     message: currentRun.message,
@@ -142,6 +145,7 @@ export default function handler(req, res) {
     return res.status(409).json({
       status: "model_missing",
       message: currentRun.message,
+      modelAvailable: false,
     });
   }
 
