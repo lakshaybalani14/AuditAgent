@@ -1,23 +1,76 @@
 import { spawn } from "child_process";
 import { randomUUID } from "crypto";
-import fs from "fs";
 import path from "path";
+import {
+  createLiveDecisionLogPath,
+  findModel,
+  findPython,
+  getActiveDecisionLogPath,
+  resolveDecisionLogPath,
+  setActiveDecisionLogPath,
+} from "../../lib/projectFiles";
 
-// This state is intentionally local to the Next.js server process. The
-// dashboard's Run API is for local development, not a serverless deployment.
-let currentRun = null;
+// Keep state on the server global so Next.js development hot reloads do not
+// reset live progress while the child simulator process is still running.
+const CURRENT_RUN_KEY = "__auditAgentDashboardCurrentRun";
 const MAX_OUTPUT_LENGTH = 4000;
 const RUN_TIMEOUT_MS = 10 * 60 * 1000;
+const LIVE_DECISIONS = 15;
 
-function publicRunState() {
-  const projectRoot = path.resolve(process.cwd(), "..");
-  const modelAvailable = Boolean(findModel(projectRoot));
-  if (!currentRun) return { status: "idle", message: "", modelAvailable };
+function explanationSettings() {
+  const provider = (process.env.EXPLANATION_PROVIDER || "offline").trim().toLowerCase();
+  const hasKey = provider === "gemini"
+    ? Boolean(process.env.GEMINI_API_KEY)
+    : provider === "claude"
+      ? Boolean(process.env.ANTHROPIC_API_KEY)
+      : false;
+  return {
+    explanationProvider: provider,
+    explanationReady: provider !== "offline" && hasKey,
+  };
+}
+
+function publicRunState(projectRoot) {
+  const currentRun = globalThis[CURRENT_RUN_KEY];
+  const modelPath = findModel(projectRoot);
+  const modelAvailable = Boolean(modelPath);
+  if (!currentRun) {
+    return {
+      status: "idle",
+      modelAvailable,
+      message: "",
+      ...(modelPath ? { modelPath: path.relative(projectRoot, modelPath) } : {}),
+      outputPath: path.relative(
+        projectRoot,
+        getActiveDecisionLogPath(projectRoot) || resolveDecisionLogPath(projectRoot)
+      ),
+      ...explanationSettings(),
+    };
+  }
   return {
     modelAvailable,
     id: currentRun.id,
     status: currentRun.status,
     message: currentRun.message,
+    ...(currentRun.modelPath ? { modelPath: currentRun.modelPath } : {}),
+    ...(currentRun.outputPath ? { outputPath: currentRun.outputPath } : {}),
+    decisionsCompleted: currentRun.decisionsCompleted,
+    decisionsTotal: currentRun.decisionsTotal,
+    explanationsCompleted: currentRun.explanationsCompleted,
+    explanationsTotal: currentRun.explanationsTotal,
+    ...(currentRun.explanationProvider
+      ? {
+          explanationProvider: currentRun.explanationProvider,
+          explanationReady: currentRun.explanationReady,
+        }
+      : {}),
+    ...(currentRun.latestAction ? { latestAction: currentRun.latestAction } : {}),
+    ...(currentRun.latestSimulationTime !== undefined
+      ? { latestSimulationTime: currentRun.latestSimulationTime }
+      : {}),
+    ...(currentRun.latestExplanationStatus
+      ? { latestExplanationStatus: currentRun.latestExplanationStatus }
+      : {}),
     ...(currentRun.detail ? { detail: currentRun.detail } : {}),
     ...(currentRun.finishedAt ? { finishedAt: currentRun.finishedAt } : {}),
   };
@@ -27,43 +80,89 @@ function appendOutput(run, chunk) {
   run.output = `${run.output}${chunk}`.slice(-MAX_OUTPUT_LENGTH);
 }
 
-function findModel(projectRoot) {
-  const configuredPath = process.env.SCHEDULER_MODEL_PATH;
-  const candidates = configuredPath
-    ? [path.resolve(projectRoot, configuredPath)]
-    : [path.join(projectRoot, "trained_model.zip"), path.join(projectRoot, "trained_model")];
-
-  return candidates.find((candidate) => {
-    try {
-      const stat = fs.statSync(candidate);
-      return stat.isFile() || stat.isDirectory();
-    } catch {
-      return false;
+function handleStdoutLine(run, line) {
+  const trimmed = line.trim();
+  if (!trimmed) return;
+  try {
+    const event = JSON.parse(trimmed);
+    if (event.type === "decision") {
+      setActiveDecisionLogPath(run.projectRoot, run.absoluteOutputPath);
+      run.decisionsCompleted = event.index;
+      run.decisionsTotal = event.total;
+      run.latestAction = event.action_name;
+      run.latestSimulationTime = event.time;
+      run.explanationProvider = event.explanation_provider;
+      run.latestExplanationStatus = event.explanation_status;
+      return;
     }
-  });
+    if (event.type === "complete") {
+      run.decisionsCompleted = event.total;
+      return;
+    }
+    if (event.type === "decisions_complete") {
+      run.decisionsCompleted = event.total;
+      run.message = run.explanationsTotal
+        ? "All simulator decisions are saved. Generating optional explanations now."
+        : "All simulator decisions are saved.";
+      return;
+    }
+    if (event.type === "explanation") {
+      run.explanationsCompleted = event.index;
+      run.explanationsTotal = event.total;
+      run.latestExplanationStatus = event.explanation_status;
+      return;
+    }
+  } catch {
+    // Preserve regular diagnostics without treating them as progress events.
+  }
+  appendOutput(run, `${line}\n`);
 }
 
 function startRun(projectRoot, modelPath) {
+  const python = findPython(projectRoot);
+  const id = randomUUID();
+  const outputPath = createLiveDecisionLogPath(projectRoot, id);
+  const settings = explanationSettings();
   const run = {
-    id: randomUUID(),
+    id,
+    projectRoot,
+    absoluteOutputPath: outputPath,
     status: "running",
-    message: "The scheduler run is in progress.",
+    message: "The DQN is stepping through simulated processes. Each action appears when that simulator step completes.",
+    modelPath: path.relative(projectRoot, modelPath),
+    outputPath: path.relative(projectRoot, outputPath),
     output: "",
+    decisionsCompleted: 0,
+    decisionsTotal: LIVE_DECISIONS,
+    explanationsCompleted: 0,
+    explanationsTotal: settings.explanationReady ? LIVE_DECISIONS : 0,
+    ...settings,
     startedAt: new Date().toISOString(),
   };
-  currentRun = run;
-
-  const localPython = path.join(projectRoot, ".venv", "bin", "python");
-  const python = process.env.PYTHON || (fs.existsSync(localPython) ? localPython : "python3");
+  globalThis[CURRENT_RUN_KEY] = run;
   let child;
   try {
     child = spawn(
       python,
-      ["-m", "rl_agent.generate_decision_log", "--model-path", modelPath],
+      [
+        "-m",
+        "rl_agent.generate_decision_log",
+        "--model-path",
+        modelPath,
+        "--decisions",
+        String(LIVE_DECISIONS),
+        "--seed",
+        "42",
+        "--output",
+        outputPath,
+        "--stream-jsonl",
+        "--step-delay-ms",
+        "700",
+      ],
       { cwd: projectRoot, env: process.env, stdio: ["ignore", "pipe", "pipe"] }
     );
   } catch (error) {
-    currentRun = {
+    globalThis[CURRENT_RUN_KEY] = {
       ...run,
       status: "failed",
       message: "The scheduler process could not be started.",
@@ -73,7 +172,13 @@ function startRun(projectRoot, modelPath) {
     return;
   }
 
-  child.stdout.on("data", (chunk) => appendOutput(run, chunk.toString()));
+  let stdoutBuffer = "";
+  child.stdout.on("data", (chunk) => {
+    stdoutBuffer += chunk.toString();
+    const lines = stdoutBuffer.split(/\r?\n/);
+    stdoutBuffer = lines.pop() || "";
+    lines.forEach((line) => handleStdoutLine(run, line));
+  });
   child.stderr.on("data", (chunk) => appendOutput(run, chunk.toString()));
 
   let timedOut = false;
@@ -84,8 +189,8 @@ function startRun(projectRoot, modelPath) {
 
   child.on("error", (error) => {
     clearTimeout(timeout);
-    if (currentRun?.id !== run.id) return;
-    currentRun = {
+    if (globalThis[CURRENT_RUN_KEY]?.id !== run.id) return;
+    globalThis[CURRENT_RUN_KEY] = {
       ...run,
       status: "failed",
       message: "The scheduler process could not be started.",
@@ -96,21 +201,25 @@ function startRun(projectRoot, modelPath) {
 
   child.on("close", (code, signal) => {
     clearTimeout(timeout);
-    if (currentRun?.id !== run.id) return;
+    if (globalThis[CURRENT_RUN_KEY]?.id !== run.id) return;
+    if (stdoutBuffer.trim()) handleStdoutLine(run, stdoutBuffer);
     const succeeded = code === 0 && !timedOut;
     const outputDetail = run.output.trim().slice(-1200);
-    currentRun = {
+    globalThis[CURRENT_RUN_KEY] = {
       ...run,
       status: succeeded ? "succeeded" : "failed",
       message: succeeded
-        ? "The run finished. The decision timeline has been refreshed."
+        ? `The live simulator run finished with ${run.decisionsCompleted} recorded agent decisions.`
         : timedOut
-          ? "The scheduler run timed out after 10 minutes. The previous decision log was kept."
-          : "The scheduler run failed. The previous decision log was kept.",
+          ? `The scheduler run timed out after 10 minutes with ${run.decisionsCompleted} decisions saved; prior run files remain untouched.`
+          : `The scheduler run failed after ${run.decisionsCompleted} decisions; prior run files remain untouched.`,
       ...(succeeded || !outputDetail
         ? {}
         : { detail: outputDetail || `Process exited with code ${code ?? signal ?? "unknown"}.` }),
       finishedAt: new Date().toISOString(),
+      latestAction: run.latestAction,
+      latestSimulationTime: run.latestSimulationTime,
+      latestExplanationStatus: run.latestExplanationStatus,
     };
   });
 }
@@ -118,7 +227,8 @@ function startRun(projectRoot, modelPath) {
 export default function handler(req, res) {
   if (req.method === "GET") {
     res.setHeader("Cache-Control", "no-store");
-    return res.status(200).json(publicRunState());
+    const projectRoot = path.resolve(process.cwd(), "..");
+    return res.status(200).json(publicRunState(projectRoot));
   }
 
   if (req.method !== "POST") {
@@ -126,7 +236,7 @@ export default function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed." });
   }
 
-  if (currentRun?.status === "running") {
+  if (globalThis[CURRENT_RUN_KEY]?.status === "running") {
     return res.status(409).json({
       status: "running",
       message: "A scheduler run is already in progress.",
@@ -136,20 +246,20 @@ export default function handler(req, res) {
   const projectRoot = path.resolve(process.cwd(), "..");
   const modelPath = findModel(projectRoot);
   if (!modelPath) {
-    currentRun = {
+    globalThis[CURRENT_RUN_KEY] = {
       status: "model_missing",
       message:
-        "A trained model is not available yet. Add trained_model.zip (or trained_model) to the project root, then try again. The existing decision log was not changed.",
+        "No trained model was found. The dashboard checks the configured model path, then saved seed-42 and seed-123 checkpoints, then a model in the project root. The existing decision log was not changed.",
       finishedAt: new Date().toISOString(),
     };
     return res.status(409).json({
       status: "model_missing",
-      message: currentRun.message,
+      message: globalThis[CURRENT_RUN_KEY].message,
       modelAvailable: false,
     });
   }
 
   startRun(projectRoot, modelPath);
   res.setHeader("Cache-Control", "no-store");
-  return res.status(202).json(publicRunState());
+  return res.status(202).json(publicRunState(projectRoot));
 }

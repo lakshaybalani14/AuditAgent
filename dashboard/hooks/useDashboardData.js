@@ -16,6 +16,7 @@ export default function useDashboardData() {
   const [decisions, setDecisions] = useState([]);
   const [report, setReport] = useState(null);
   const [reportStatus, setReportStatus] = useState("loading");
+  const [reportInfo, setReportInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [errors, setErrors] = useState({});
@@ -38,6 +39,7 @@ export default function useDashboardData() {
       if (payload && typeof payload === "object" && typeof payload.status === "string" && (payload.report === null || (payload.report && typeof payload.report === "object"))) {
         setReport(payload.report);
         setReportStatus(payload.status);
+        setReportInfo({ source: payload.source, selectedModelPath: payload.selectedModelPath, modelMatchesSelection: payload.modelMatchesSelection });
       } else nextErrors.report = "The evaluation API returned an unexpected format.";
     } else nextErrors.report = results[1].reason?.message || "Could not load the evaluation report.";
     if (results[2].status === "fulfilled") {
@@ -66,9 +68,9 @@ export default function useDashboardData() {
 
   useEffect(() => {
     refresh();
-    const interval = window.setInterval(() => refresh({ quiet: true }), 5000);
+    const interval = window.setInterval(() => refresh({ quiet: true }), runStatus.status === "running" ? 800 : 5000);
     return () => window.clearInterval(interval);
-  }, [refresh]);
+  }, [refresh, runStatus.status]);
 
-  return { decisions, report, reportStatus, loading, lastUpdated, errors, runStatus, refresh, startRun };
+  return { decisions, report, reportStatus, reportInfo, loading, lastUpdated, errors, runStatus, refresh, startRun };
 }

@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-from rl_agent.scheduler_env import SchedulerEnv
+from rl_agent.scheduler_env import OBSERVATION_FEATURES, SchedulerEnv
 
 
 def make_env():
@@ -35,7 +35,9 @@ def workload_definition(env):
 
 class SchedulerEnvironmentTests(unittest.TestCase):
     def assert_valid_observation(self, env, observation):
-        self.assertEqual(observation.shape, (7,))
+        self.assertEqual(observation.shape, (len(OBSERVATION_FEATURES),))
+        self.assertTrue(np.all(observation >= 0.0))
+        self.assertTrue(np.all(observation <= 1.0))
         self.assertEqual(observation.dtype, np.float32)
         self.assertTrue(env.observation_space.contains(observation))
 
@@ -102,6 +104,40 @@ class SchedulerEnvironmentTests(unittest.TestCase):
                 self.assertTrue(math.isfinite(reward))
                 self.assertIsInstance(terminated, bool)
                 self.assertIsInstance(truncated, bool)
+        finally:
+            env.close()
+
+    def test_reward_tracks_completed_process_waiting_time(self):
+        env = make_env()
+        try:
+            observation, _ = env.reset(seed=916)
+            total_reward = 0.0
+            terminated = truncated = False
+            steps = 0
+            while not (terminated or truncated):
+                observation, reward, terminated, truncated, info = env.step(0)
+                total_reward += reward
+                self.assertGreaterEqual(info["waiting_delta"], 0)
+                steps += 1
+                self.assertLess(steps, 100)
+            completed_wait = sum(process.waiting_time for process in env.sim.completed)
+            self.assertEqual(env.sim.get_total_waiting_time(), completed_wait)
+            self.assertAlmostEqual(total_reward, -completed_wait)
+        finally:
+            env.close()
+
+    def test_switch_penalty_is_charged_only_when_algorithm_changes(self):
+        env = SchedulerEnv(
+            max_processes=4,
+            workload_profiles=("short_job_heavy",),
+            switch_penalty=0.75,
+        )
+        try:
+            env.reset(seed=29)
+            _, reward, _, _, info = env.step(3)  # Switch from RR to MLFQ.
+            self.assertTrue(info["scheduler_changed"])
+            self.assertFalse(info["is_starving"])
+            self.assertAlmostEqual(reward, -info["waiting_delta"] - 0.75)
         finally:
             env.close()
 

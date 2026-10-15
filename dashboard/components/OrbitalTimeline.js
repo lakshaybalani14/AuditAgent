@@ -13,10 +13,15 @@ function number(value) {
   return Number.isFinite(Number(value)) ? Number(value).toFixed(1) : "—";
 }
 
-export default function OrbitalTimeline({ decisions = [], loading = false }) {
+function eventKey(event) {
+  return `${event?.episode ?? "—"}-${event?.step ?? "—"}-${event?.state?.time ?? "—"}-${event?.action ?? "—"}`;
+}
+
+export default function OrbitalTimeline({ decisions = [], loading = false, runStatus }) {
   const events = useMemo(() => decisions.slice(-8).reverse(), [decisions]);
   const [selectedKey, setSelectedKey] = useState(null);
-  const selected = events.find((event) => `${event?.state?.time}-${event?.action}` === selectedKey) || events[0];
+  const selected = events.find((event) => eventKey(event) === selectedKey) || events[0];
+  const runLabel = runStatus?.status === "running" ? "LIVE" : events.some((event) => event?.source === "sample_preview") ? "SAMPLE" : "SAVED";
 
   if (!events.length) {
     return <section className="panel orbital-panel"><p className="eyebrow">AGENT ACTIVITY</p><h3>Decision orbit</h3><p className="chart-empty">{loading ? "Waiting for decisions…" : "No decisions recorded for this run yet."}</p></section>;
@@ -29,16 +34,16 @@ export default function OrbitalTimeline({ decisions = [], loading = false }) {
         <span className="feed-count">Latest {events.length} / {decisions.length}</span>
       </div>
       <div className="orbit-layout">
-        <div className="orbit-stage" aria-label="Recent scheduler decisions arranged around the live run">
+        <div className="orbit-stage" aria-label="Recent scheduler decisions arranged around the run">
           <div className="orbit-ring orbit-ring-outer" />
           <div className="orbit-ring orbit-ring-inner" />
-          <div className="orbit-center"><span className="orbit-center-pulse" /><b>LIVE</b><small>RUN</small></div>
+          <div className="orbit-center"><span className="orbit-center-pulse" /><b>{runLabel}</b><small>{runLabel === "SAMPLE" ? "DATA" : "RUN"}</small></div>
           {events.map((event, index) => {
             const angle = (-90 + index * (360 / events.length)) * (Math.PI / 180);
             const x = 50 + Math.cos(angle) * 39;
             const y = 50 + Math.sin(angle) * 39;
-            const key = `${event?.state?.time}-${event?.action}`;
-            const active = selected && `${selected?.state?.time}-${selected?.action}` === key;
+            const key = eventKey(event);
+            const active = selected && eventKey(selected) === key;
             return (
               <button
                 key={`${key}-${index}`}
@@ -53,12 +58,12 @@ export default function OrbitalTimeline({ decisions = [], loading = false }) {
             );
           })}
         </div>
-        {selected && <div className="orbit-detail" key={`${selected?.state?.time}-${selected?.action}`}>
+        {selected && <div className="orbit-detail" key={eventKey(selected)}>
           <div className="orbit-detail-top"><span className="eyebrow">TICK {selected?.state?.time ?? "—"}</span><span className="orbit-policy">{POLICIES[selected?.state?.current_algo] || "Scheduler"}</span></div>
           <h4>{selected?.action_name || ACTIONS[selected?.action] || "Unknown action"}</h4>
           <p>Queue <b>{selected?.state?.queue_length ?? "—"}</b><span>·</span> average wait <b>{number(selected?.state?.avg_wait_time)}</b></p>
           <div className="orbit-detail-rule" />
-          <p className="orbit-explanation">{selected?.explanation || (selected?.explanation_status === "unavailable" ? selected?.explanation_error || "Cloud explanation unavailable. The recorded decision is still shown." : "No cloud explanation saved. Decision details are available from the recorded scheduler state.")}</p>
+          <p className="orbit-explanation">{selected?.explanation || (selected?.explanation_status === "pending" ? "Generating an explanation for this decision…" : selected?.explanation_status === "unavailable" ? selected?.explanation_error || "Cloud explanation unavailable. The recorded decision is still shown." : "No cloud explanation saved. Decision details are available from the recorded scheduler state.")}</p>
           {selected?.state?.is_starving && <span className="orbit-risk">Starvation risk detected</span>}
         </div>}
       </div>

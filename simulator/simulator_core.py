@@ -67,6 +67,7 @@ class SimulatorCore:
         self.running_process = None
         self.running_algorithm = None
         self.running_level = None
+        self.processes = []
         self.reset()
 
     def reset(self, seed=None, options=None):
@@ -90,6 +91,7 @@ class SimulatorCore:
                 self._rng,
             )
             workload = [Process(**spec) for spec in specs]
+        self.processes = list(workload)
         self.time = 0
         self.current_algo = ALGO_ROUND_ROBIN
         self.ready_queue = []
@@ -189,6 +191,20 @@ class SimulatorCore:
             "current_algo": self.current_algo,
             "is_starving": max_wait_time > STARVATION_THRESHOLD,
         }
+
+    def get_total_waiting_time(self):
+        """Return all completed plus currently accrued READY waiting ticks.
+
+        This is the exact objective measured by completed-process waiting time
+        when the episode finishes, while still giving the learner dense credit
+        during an episode.
+        """
+        total = 0
+        for process in self.processes:
+            total += process.waiting_time
+            if process.state == Process.READY:
+                total += self.time - process.last_ready_time
+        return total
 
     def apply_action(self, action):
         if action == 0:

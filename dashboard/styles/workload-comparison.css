@@ -1,0 +1,59 @@
+.workload-comparison { padding: 28px; margin-bottom: 20px; border-radius: 12px; }
+.workload-comparison-intro { max-width: 700px; }
+.workload-comparison-badge { display: inline-flex; align-items: center; gap: 7px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; color: var(--accent); font-size: 11px; font-weight: 600; }
+.workload-comparison-badge svg { width: 15px; height: 15px; }
+.workload-comparison-intro h3 { margin: 15px 0 9px; font-size: clamp(22px, 2.5vw, 30px); line-height: 1.2; letter-spacing: -.04em; }
+.workload-comparison-intro p { color: var(--muted); font-size: 12px; line-height: 1.7; }
+.workload-profile-picker { display: flex; flex-wrap: wrap; gap: 9px; margin: 24px 0 20px; }
+.workload-profile-picker button {
+  min-height: 36px;
+  padding: 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface2) 78%, var(--surface)), var(--surface2));
+  box-shadow: inset 0 1px 1px #ffffff12, inset 0 -2px 3px #00000012;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-transform: capitalize;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .18s, color .18s, border-color .18s, box-shadow .18s;
+}
+.workload-profile-picker button:hover { color: var(--text); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.workload-profile-picker button[aria-pressed="true"] {
+  color: var(--bg);
+  border-color: var(--accent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 86%, #fff), var(--accent));
+  box-shadow: inset 0 1px 1px #ffffff40, inset 0 -2px 3px #00000018, 0 2px 8px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+.workload-profile-picker button:focus-visible, .workload-table-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.workload-table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+.workload-comparison-table { width: 100%; min-width: 760px; border-collapse: collapse; table-layout: fixed; text-align: center; font-size: 12px; }
+.workload-comparison-table caption { padding: 16px 18px; text-align: left; background: var(--surface2); }
+.workload-comparison-table caption strong { display: block; margin-bottom: 5px; color: var(--text); font-size: 13px; text-transform: capitalize; }
+.workload-comparison-table caption span { color: var(--muted); font-size: 11px; line-height: 1.6; }
+.workload-comparison-table th, .workload-comparison-table td { padding: 14px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.workload-comparison-table thead th:first-child { width: 28%; text-align: left; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; vertical-align: bottom; padding-bottom: 20px; }
+.workload-policy-heading { display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 5px 0 8px; }
+.workload-policy-heading > span { color: var(--muted); font-size: 9px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; }
+.workload-policy-heading strong { color: var(--text); font-size: 18px; letter-spacing: -.025em; }
+.workload-policy-heading small { color: var(--muted); font-size: 10px; font-weight: 400; }
+.workload-comparison-table .workload-agent-column { background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.workload-agent-column .workload-policy-heading > span { color: var(--accent); }
+.workload-comparison-table .workload-metric-group th { padding: 10px 14px; background: var(--surface2); text-align: left; color: var(--text); font-size: 10px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
+.workload-comparison-table tbody tr:not(.workload-metric-group) > th { text-align: left; font-size: 11px; font-weight: 500; color: var(--text); }
+.workload-comparison-table tbody th small { display: block; margin-top: 5px; color: var(--muted); font-size: 9px; font-weight: 400; }
+.workload-comparison-table tbody tr:last-child > * { border-bottom: 0; }
+.workload-metric-value { display: inline-flex; align-items: center; justify-content: center; gap: 4px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.workload-metric-extreme { color: var(--accent); font-weight: 650; }
+.workload-metric-value > svg { flex: none; width: 13px; height: 13px; }
+.workload-comparison-note { margin-top: 14px; max-width: 860px; color: var(--muted); font-size: 11px; line-height: 1.7; }
+.workload-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+@media (max-width: 720px) {
+  .workload-comparison { padding: 20px 16px; }
+  .workload-profile-picker { gap: 7px; margin-top: 20px; }
+  .workload-profile-picker button { padding: 8px 13px; font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) { .workload-profile-picker button { transition: none; } }

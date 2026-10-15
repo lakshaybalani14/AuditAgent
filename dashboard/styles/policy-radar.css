@@ -1,0 +1,49 @@
+.policy-radar { --radar-blue: #397dc6; --radar-amber: #a97615; --radar-purple: #8b65c8; margin: 0; }
+.dark .policy-radar { --radar-blue: #61aaf4; --radar-amber: #e7b65b; --radar-purple: #b797ef; }
+.policy-radar-intro { color: var(--muted); font-size: 12px; line-height: 1.7; }
+.policy-radar-legend { display: flex; flex-wrap: wrap; gap: 9px; margin: 20px 0 4px; }
+.policy-radar-legend button { display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--text); font-size: 11px; cursor: pointer; }
+.policy-radar-legend button[aria-pressed="false"] { opacity: .45; }
+.policy-radar-legend button:disabled { cursor: default; }
+.policy-radar-legend small { color: var(--muted); font-size: 9px; }
+.policy-radar-legend i, .policy-radar-tooltip dt i { display: inline-block; flex: none; width: 9px; height: 9px; border-radius: 3px; background: var(--policy-color); }
+.policy-radar-layout { display: grid; grid-template-columns: minmax(0, 1fr) 250px; align-items: center; gap: 16px; margin-top: 10px; }
+.policy-radar-canvas { position: relative; min-width: 0; }
+.policy-radar-canvas > svg { display: block; width: 100%; max-height: 500px; overflow: visible; }
+.policy-radar-grid { fill: none; stroke: var(--line); stroke-width: 1; }
+.policy-radar-spoke { stroke: var(--line); stroke-width: 1; }
+.policy-radar-scale { fill: var(--muted); font-size: 9px; }
+.policy-radar-series { transition: opacity .2s ease; }
+.policy-radar-series.is-muted { opacity: .15; }
+.policy-radar-series polygon { fill: var(--policy-color); fill-opacity: .12; stroke: var(--policy-color); stroke-width: 2; stroke-linejoin: round; }
+.policy-radar-series circle { fill: var(--policy-color); stroke: var(--surface); stroke-width: 1; transition: r .15s; }
+.policy-radar-active-spoke { stroke: var(--muted); stroke-dasharray: 3 5; opacity: .5; pointer-events: none; }
+.policy-radar-axis { cursor: pointer; outline: none; }
+.policy-radar-axis rect { fill: transparent; stroke: transparent; }
+.policy-radar-axis text { fill: var(--muted); font-size: 13px; font-weight: 600; }
+.policy-radar-axis .policy-radar-axis-direction { font-size: 9px; font-weight: 400; }
+.policy-radar-axis.is-active text { fill: var(--text); }
+.policy-radar-axis:focus-visible rect { stroke: var(--accent); stroke-width: 2; }
+.policy-radar-tooltip { padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: 0 8px 24px #00000012; }
+.policy-radar-tooltip label { display: block; margin-bottom: 9px; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .07em; }
+.policy-radar-tooltip select { width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface2); color: var(--text); font: inherit; font-size: 12px; }
+.policy-radar-tooltip p { margin-top: 10px; color: var(--muted); font-size: 10px; }
+.policy-radar-tooltip dl { display: grid; gap: 16px; margin: 20px 0 0; }
+.policy-radar-tooltip dl > div { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.policy-radar-tooltip dt { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; }
+.policy-radar-tooltip dd { margin: 0; color: var(--text); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.policy-radar-note { padding-top: 12px; color: var(--muted); font-size: 10px; line-height: 1.7; }
+.policy-radar-note strong { color: var(--text); }
+.policy-radar-empty { padding: 12px; color: var(--muted); font-size: 12px; }
+.policy-radar-values { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.policy-radar-values summary { color: var(--text); font-size: 12px; cursor: pointer; }
+.policy-radar-values .table-wrap { margin-top: 16px; }
+.policy-radar-legend button:focus-visible, .policy-radar-tooltip select:focus-visible, .policy-radar-values summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 800px) {
+  .policy-radar-layout { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .policy-radar-tooltip { max-width: 440px; width: 100%; justify-self: center; }
+  .policy-radar-canvas > svg { min-height: 240px; }
+  .policy-radar-axis text { font-size: 18px; }
+  .policy-radar-axis .policy-radar-axis-direction { font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .policy-radar-series, .policy-radar-series circle { transition: none; } }

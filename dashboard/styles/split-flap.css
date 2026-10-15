@@ -1,0 +1,34 @@
+.split-flap-text.split-flap-text { display: inline-flex; vertical-align: middle; max-width: 100%; color: var(--flap-text); font-size: var(--flap-font); font-variant-numeric: tabular-nums; letter-spacing: 0; line-height: 1.22; }
+.split-flap-text span { color: inherit; font-size: inherit; letter-spacing: 0; }
+.split-flap-text .split-flap-board { display: inline-flex; align-items: center; gap: var(--flap-gap); }
+.split-flap-text .split-flap-tile { position: relative; display: inline-block; flex: none; width: .7em; height: 1.22em; border-radius: var(--flap-radius); background: var(--flap-color); box-shadow: 0 calc(var(--flap-depth) * .06em) calc(var(--flap-depth) * .12em) #0004, inset 0 1px 0 #ffffff0c; perspective: 6em; isolation: isolate; }
+.split-flap-text .split-flap-half { position: absolute; left: 0; display: block; width: 100%; height: 50%; overflow: hidden; background: var(--flap-color); backface-visibility: hidden; }
+.split-flap-half > span { position: absolute; left: 0; display: block; width: 100%; height: 1.22em; line-height: 1.22em; text-align: center; }
+.split-flap-text .split-flap-top { top: 0; border-radius: var(--flap-radius) var(--flap-radius) 0 0; }
+.split-flap-top > span { top: 0; }
+.split-flap-text .split-flap-bottom { bottom: 0; border-radius: 0 0 var(--flap-radius) var(--flap-radius); }
+.split-flap-bottom > span { top: -100%; }
+.split-flap-text .split-flap-moving { position: absolute; inset: 0; }
+.split-flap-text .split-flap-leaf-top { z-index: 3; transform-origin: center bottom; animation: split-flap-top-turn calc(var(--flap-duration) / 2) ease-in forwards; }
+.split-flap-text .split-flap-leaf-bottom { z-index: 4; transform: rotateX(90deg); transform-origin: center top; animation: split-flap-bottom-turn calc(var(--flap-duration) / 2) ease-out calc(var(--flap-duration) / 2) forwards; }
+.split-flap-text .split-flap-seam { position: absolute; z-index: 5; top: 50%; left: 0; width: 100%; height: 1px; background: #0005; box-shadow: 0 1px 0 #ffffff08; pointer-events: none; }
+.split-flap-tile::after { position: absolute; z-index: 6; inset: 0; border-radius: inherit; background: linear-gradient(135deg,#fff,transparent 60%); opacity: var(--flap-glare); content: ""; pointer-events: none; }
+.split-flap-text .split-flap-punctuation { display: inline-block; flex: none; min-width: .2em; text-align: center; }
+.split-flap-text .split-flap-sr-only, .flap-heading-text > .split-flap-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.workload-metric-value .split-flap-text, .policy-radar-tooltip .split-flap-text { vertical-align: baseline; }
+.action-bar-row { grid-template-columns: 100px minmax(0, 1fr) minmax(30px, auto); }
+.action-bar-row > b { display: flex; justify-content: flex-end; }
+.flap-heading-text { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .3em; max-width: 100%; letter-spacing: 0; vertical-align: middle; }
+.flap-heading-word { display: inline-flex; max-width: 100%; }
+.flap-heading-accent { color: var(--accent); }
+.route-load-indicator { position: fixed; z-index: 200; top: 0; left: 0; width: 100%; height: 3px; overflow: visible; background: #61d6a833; }
+.route-load-indicator::before { display: block; width: 35%; height: 100%; background: #61d6a8; content: ""; animation: route-loading-slide 1s ease-in-out infinite alternate; }
+.route-load-indicator > span, .route-navigation-error { position: fixed; z-index: 201; top: 108px; right: 28px; padding: 9px 12px; border: 1px solid #35413b; border-radius: 8px; background: #171e1b; color: #f2f7f4; font-size: 12px; box-shadow: 0 4px 18px #0002; }
+.route-navigation-error { border-color: #e26e5a; }
+@keyframes route-loading-slide { from { transform: translateX(0); } to { transform: translateX(185%); } }
+@media (prefers-reduced-motion: reduce) { .route-load-indicator::before { width: 100%; animation: none; } }
+.hero h2.hero-flap-heading { font-size: clamp(20px, 3vw, 38px); line-height: 1.5; letter-spacing: 0; }
+.page-heading h2.page-flap-heading, .pipeline-intro h2.page-flap-heading { margin-top: 12px; font-size: clamp(20px, 3vw, 36px); line-height: 1.5; letter-spacing: 0; }
+@keyframes split-flap-top-turn { from { transform: rotateX(0deg); } to { transform: rotateX(-90deg); } }
+@keyframes split-flap-bottom-turn { from { transform: rotateX(90deg); } to { transform: rotateX(0deg); } }
+@media (prefers-reduced-motion: reduce) { .split-flap-text .split-flap-leaf-top, .split-flap-text .split-flap-leaf-bottom { animation: none; } .split-flap-text .split-flap-moving { display: none; } }

@@ -1,14 +1,13 @@
 import DashboardLayout from "../components/DashboardLayout";
 import DecisionFeed from "../components/DecisionFeed";
-import OrbitalTimeline from "../components/OrbitalTimeline";
-import RunCharts from "../components/RunCharts";
+import FlapHeadingText from "../components/FlapHeadingText";
 import useDashboardData from "../hooks/useDashboardData";
 export default function DecisionsPage() {
   const data = useDashboardData();
-  return <DashboardLayout {...data} statusLabel={data.errors.decisions ? "Connection issue" : "Live decision log"} onRefresh={data.refresh} onRun={data.startRun}>
-    <section className="page-heading"><p className="eyebrow">RUN INSPECTION</p><h2>Decision log</h2><p>Inspect the latest activity, then review every recorded action and its scheduler state.</p></section>
-    <RunCharts decisions={data.decisions} />
-    <OrbitalTimeline decisions={data.decisions} loading={data.loading} />
+  const preview = data.decisions.some((entry) => entry?.source === "sample_preview");
+  const status = data.errors.decisions ? "Connection issue" : preview ? "Sample preview" : `${data.decisions.length} decisions saved`;
+  return <DashboardLayout {...data} statusLabel={status} onRefresh={data.refresh} onRun={data.startRun}>
+    <section className="page-heading"><p className="eyebrow">RUN INSPECTION</p><h2 className="page-flap-heading"><FlapHeadingText>Decision log</FlapHeadingText></h2><p>Open a recorded decision to see what the agent observed, chose, and changed in the simulator.</p></section>
     <section className="full-decision-log"><DecisionFeed decisions={data.decisions} loading={data.loading} /></section>
   </DashboardLayout>;
 }

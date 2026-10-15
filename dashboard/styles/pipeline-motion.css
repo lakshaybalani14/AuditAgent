@@ -1,0 +1,27 @@
+.pipeline-scroll-scene { position: relative; min-height: calc(100vh + 640px); }
+.pipeline-scroll-scene > .scheduler-pipeline { position: sticky; top: 110px; background: var(--surface); }
+.pipeline-scroll-guide { display: none; }
+.pipeline-scroll-motion .pipeline-scroll-guide { display: flex; align-items: center; gap: 20px; padding: 12px 0 0; color: var(--muted); font-size: 10px; }
+.pipeline-scroll-guide > span { white-space: nowrap; }
+.pipeline-scroll-guide > div { flex: 1; height: 3px; overflow: hidden; border-radius: 999px; background: var(--surface2); }
+.pipeline-scroll-guide > div > i { display: block; width: calc(var(--workflow-progress) * 100%); height: 100%; border-radius: inherit; background: var(--accent); transition: width .12s linear; }
+.pipeline-scroll-motion .pipeline-step { opacity: calc(.55 + var(--stage-reveal) * .45); transform: translateY(calc((1 - var(--stage-reveal)) * 12px)); transition: opacity .25s, transform .25s, background .25s; }
+.pipeline-scroll-motion .scroll-stage-active .pipeline-step { opacity: 1; background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.pipeline-scroll-motion .scroll-stage-active .pipeline-cube { transform: translateY(-5px); filter: drop-shadow(0 10px 12px color-mix(in srgb, var(--accent) 28%, transparent)); }
+.pipeline-scroll-motion .pipeline-connector::after { position: absolute; left: 0; width: calc(var(--connector-progress) * 100%); height: 2px; border-radius: 2px; background: var(--accent); content: ""; transition: width .15s linear; }
+.pipeline-scroll-packet { display: none; }
+.pipeline-scroll-motion .pipeline-scroll-packet { position: absolute; z-index: 1; display: block; top: -3px; left: calc(var(--connector-progress) * (100% - 6px)); width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 50%, transparent); opacity: var(--connector-progress); transition: left .15s linear; }
+@media (max-width: 980px) {
+  .pipeline-scroll-scene { min-height: 0; }
+  .pipeline-scroll-scene > .scheduler-pipeline { position: static; }
+  .pipeline-scroll-motion .pipeline-connector::after { top: 0; width: 2px; height: calc(var(--connector-progress) * 100%); transition: height .15s linear; }
+  .pipeline-scroll-motion .pipeline-scroll-packet { left: -2px; top: calc(var(--connector-progress) * (100% - 6px)); transition: top .15s linear; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pipeline-scroll-scene { min-height: 0; }
+  .pipeline-scroll-scene > .scheduler-pipeline { position: static; }
+  .pipeline-scroll-motion .pipeline-scroll-guide, .pipeline-scroll-motion .pipeline-scroll-packet { display: none; }
+  .pipeline-scroll-motion .pipeline-step { opacity: 1; transform: none; transition: none; }
+  .pipeline-scroll-motion .scroll-stage-active .pipeline-cube { transform: none; }
+  .pipeline-scroll-motion .pipeline-connector::after { display: none; }
+}

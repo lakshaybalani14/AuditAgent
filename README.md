@@ -57,12 +57,26 @@ requests and uses your Gemini API quota. Use `--provider claude` with
 `ANTHROPIC_API_KEY` only if you want Claude. The default provider is offline;
 an existing output file is not replaced unless `--force` is provided.
 
-While the dashboard is running locally, **Run scheduler** starts a new
-decision-generation run through `POST /api/run`. The API looks for
-`trained_model.zip` or `trained_model` in the project root. To use a model at
-another path, set `SCHEDULER_MODEL_PATH` before starting the dashboard. The
-API reports a clear missing-model message when neither path exists, and it
-keeps the existing decision log if a run fails. Explanations are optional.
+While the dashboard is running locally, **Run live simulation** starts a new
+15-step simulator run through `POST /api/run`. It uses the saved
+`runs/dqn-learning-v2-seed-42/best_model.zip` checkpoint when available, then
+checks the seed-123 checkpoint and project-root model paths. Set
+`SCHEDULER_MODEL_PATH` before starting Next.js to choose another checkpoint.
+The matching report is loaded from that model's run folder; override it with
+`SCHEDULER_EVALUATION_PATH` when needed. Fresh dashboard decisions go to
+unique `decision_log.generated.live-<run-id>.json` files, preserving both the
+sample log and earlier generated runs. `.dashboard-data/active-decision-log.json`
+points the dashboard to the latest run. Set `SCHEDULER_DECISION_LOG_PATH` to
+choose the directory and filename prefix for those run files. While a run is
+active, the timeline polls every 0.8 seconds and the queue panel shows process
+states after each actual DQN action. Expanded events include before/after state,
+exact 20 normalized inputs and the DQN's estimated Q-value for every action.
+On Windows the dashboard
+automatically uses `.venv\Scripts\python.exe`;
+on Linux/macOS it uses `.venv/bin/python`. `PYTHON` overrides this choice.
+The API reports a clear missing-model message when no checkpoint is found.
+Each run is saved separately, so failed or partial runs do not overwrite older
+logs or model checkpoints. Explanations are optional.
 To use Gemini during a real model run, put these entries in the ignored
 `dashboard/.env.local` file, then restart Next.js:
 
@@ -70,9 +84,15 @@ To use Gemini during a real model run, put these entries in the ignored
 EXPLANATION_PROVIDER=gemini
 GEMINI_API_KEY=your_key_here
 GEMINI_MODEL=gemini-3.8-flash
+GEMINI_TIMEOUT_MS=15000
 ```
 
-The default `offline` provider makes no cloud API calls. Set
+The dashboard shows whether Gemini is configured or whether its key is missing;
+that badge does not verify that a request will succeed. All 15 DQN decisions
+are saved first, then Gemini is called to explain each observed state and
+chosen action. The default 15-second request timeout keeps slow explanations
+from delaying the simulator. These explanations are post-decision commentary,
+not the DQN's internal reasoning. The default `offline` provider makes no cloud API calls. Set
 `EXPLANATION_PROVIDER=claude` and `ANTHROPIC_API_KEY` only if your team needs
 Claude compatibility.
 
@@ -347,67 +367,65 @@ key and may use its API quota.
 
 ## `dashboard/pages/api/decisions.js`
 
-**Purpose:** A Next.js API route (server-side endpoint) that reads
-`decision_log.json` and returns it as JSON for the frontend to fetch.
+**Purpose:** A Next.js API route that serves the newest live decision log,
+falling back to the original sample `decision_log.json` before a live run.
 
 **Build spec:**
 - Default-exported `handler(req, res)` function (Next.js API route
   convention).
-- Reads `decision_log.json` from the project root (`process.cwd()`)
-  using Node's `fs.readFileSync`.
+- Reads the latest run path from the ignored `.dashboard-data/` pointer;
+  before any live run, it reads the original sample file.
 - Parses it as JSON and responds `res.status(200).json(decisions)`.
-- If the file doesn't exist yet (explainer.py hasn't been run), catch
-  the error and return an empty array with status 200 rather than
-  crashing — the dashboard should render an empty state gracefully,
-  not error out.
+- Live files are replaced atomically by Python after each decision, so polling
+  never reads half-written JSON. If no log exists, the route returns an empty
+  array rather than crashing.
 
 ---
 
 ## `dashboard/components/QueueView.js`
 
-**Purpose:** Displays the most recent system state as a small stat
-panel.
+**Purpose:** Displays the latest simulator state plus its individual simulated
+processes.
 
 **Build spec:**
-- React functional component `QueueView({ state })`.
-- If `state` is falsy, render a placeholder message instead of
-  crashing on undefined field access.
-- Otherwise render: time, queue length, average wait, longest wait,
-  I/O-bound count, CPU-bound count, and a starvation-risk line whose
-  text color changes (e.g. red vs green) based on `state.is_starving`.
+- React component `QueueView({ state, decisions })` using the last decision's
+  resulting state and process snapshot.
+- Shows current scheduling policy, ready queue, wait, process status, remaining
+  CPU, waiting time, and priority.
+- Displays simulated processes only; it does not inspect host OS processes.
 
 ---
 
 ## `dashboard/components/DecisionFeed.js`
 
-**Purpose:** Displays the full list of logged decisions, each with an
-optional Gemini or Claude explanation — the centerpiece of the demo.
+**Purpose:** Shows the actions the saved DQN actually selected and the model
+data behind each action, with optional post-decision Gemini/Claude commentary.
 
 **Build spec:**
 - React functional component `DecisionFeed({ decisions })`.
 - If `decisions` is empty/undefined, render a placeholder message.
-- Otherwise map over the array and render one bordered card per entry
-  showing: time (`entry.state.time`), the action name
-  (`entry.action_name`), and the explanation text
-  (`entry.explanation`). Use the array index as the React `key`.
+- Otherwise render one event per simulator step. Expand it to see the exact 20
+  normalized network inputs, all five Q-values, the chosen action, reward,
+  observed processes, and any LLM explanation. Q-values estimate future reward;
+  they are not probabilities.
 
 ---
 
 ## `dashboard/pages/index.js`
 
-**Purpose:** The dashboard's main page — fetches the decision log once
-on load and passes it down into `QueueView` and `DecisionFeed`.
+**Purpose:** The dashboard's main page — loads the report and current run, then
+polls live decisions while the Python simulator runs.
 
 **Build spec:**
-- Functional component using `useState` (holds `decisions`, initialized
-  to `[]`) and `useEffect` (with an empty dependency array, so it runs
-  exactly once on mount) to `fetch("/api/decisions")`, parse the JSON,
-  and store it in state.
-- Derive `latestState` as `decisions[decisions.length - 1]?.state` (or
-  `null` if empty) and pass it to `QueueView`.
+- Polls the decision, evaluation, and run APIs every 0.8 seconds during a run
+  and every 5 seconds while idle.
+- The Run live simulation button launches the selected checkpoint through
+  `POST /api/run`; its Python child emits progress after every action.
+- Derives `latestState` from the last resulting simulator state and passes the
+  full event list to `QueueView`.
 - Pass the full `decisions` array to `DecisionFeed`.
-- Simple two-column layout: `QueueView` on one side, `DecisionFeed` on
-  the other.
+- Shows whether Gemini is enabled. The run is independent of Gemini and works
+  offline when no API key is configured.
 
 ---
 

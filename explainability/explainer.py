@@ -25,9 +25,26 @@ ACTION_NAMES = {
 }
 
 
-def build_prompt(state, action):
+def explanation_error_message(error, provider="gemini"):
+    """Describe provider failures without copying credentials or request bodies."""
+    name = provider.title()
+    code = str(getattr(error, "code", ""))
+    if code == "429":
+        return f"{name} quota or rate limit exceeded (HTTP 429). Check Google AI Studio usage and retry when quota is available." if provider == "gemini" else f"{name} quota or rate limit exceeded (HTTP 429). Retry when quota is available."
+    if code in {"401", "403"}:
+        return f"{name} denied access (HTTP {code}). Check the API key and project permissions."
+    if code == "404":
+        return f"{name} model unavailable (HTTP 404). Check the configured model and project access."
+    if code == "400":
+        return f"{name} rejected the request (HTTP 400). Check the API key and model settings."
+    if code.startswith("5"):
+        return f"{name} service error (HTTP {code}). Retry later."
+    return f"{name} request failed ({type(error).__name__})."
+
+
+def build_prompt(state, action, observation=None, q_values=None):
     action_name = ACTION_NAMES[action]
-    return (
+    prompt = (
         "You are explaining the decisions of a reinforcement-learning agent "
         "that manages an operating system's process scheduler.\n\n"
         "Current system state:\n"
@@ -44,10 +61,27 @@ def build_prompt(state, action):
         "specific numbers. If the action looks questionable given the state, "
         "say so honestly rather than rationalizing it."
     )
+    if observation:
+        features = ", ".join(
+            f"{name}={value:.3f}" for name, value in observation.items()
+        )
+        prompt += f"\n\nExact normalized feature values supplied to the DQN: {features}."
+    if q_values:
+        scores = ", ".join(
+            f"{name}={value:.3f}" for name, value in q_values.items()
+        )
+        prompt += (
+            "\n\nThe DQN's estimated action values (higher is preferred) were: "
+            f"{scores}. Explain the selected action using these values, and do not "
+            "claim that an estimated value guarantees a better real-world result."
+        )
+    return prompt
 
 
-def explain_decision(state, action, client, provider="gemini"):
-    prompt = build_prompt(state, action)
+def explain_decision(
+    state, action, client, provider="gemini", observation=None, q_values=None
+):
+    prompt = build_prompt(state, action, observation=observation, q_values=q_values)
     if provider == "gemini":
         response = client.models.generate_content(
             model=os.environ.get("GEMINI_MODEL", "gemini-3.8-flash"),
@@ -77,8 +111,15 @@ def create_client(provider):
         if not api_key:
             raise EnvironmentError("GEMINI_API_KEY is required when --provider gemini is selected.")
         from google import genai
+        from google.genai import types
 
-        return genai.Client(api_key=api_key)
+        timeout_ms = int(os.environ.get("GEMINI_TIMEOUT_MS", "15000"))
+        if timeout_ms < 1000:
+            raise ValueError("GEMINI_TIMEOUT_MS must be at least 1000 milliseconds.")
+        return genai.Client(
+            api_key=api_key,
+            http_options=types.HttpOptions(timeout=timeout_ms),
+        )
     if provider == "claude":
         api_key = os.environ.get("ANTHROPIC_API_KEY")
         if not api_key:
@@ -120,6 +161,7 @@ def build_decision_log(n=5, client=None, provider="offline"):
     decisions = generate_fake_decisions(n=n)
 
     log = []
+    quota_error = None
     for d in decisions:
         entry = {
             "state": d["state"],
@@ -129,7 +171,10 @@ def build_decision_log(n=5, client=None, provider="offline"):
             "explanation": None,
             "explanation_status": "not_configured",
         }
-        if client is not None:
+        if quota_error:
+            entry["explanation_status"] = "unavailable"
+            entry["explanation_error"] = quota_error
+        elif client is not None:
             try:
                 entry["explanation"] = explain_decision(
                     d["state"], d["action"], client, provider=provider
@@ -137,7 +182,9 @@ def build_decision_log(n=5, client=None, provider="offline"):
                 entry["explanation_status"] = "available"
             except Exception as error:
                 entry["explanation_status"] = "unavailable"
-                entry["explanation_error"] = f"{provider.title()} request failed ({type(error).__name__})."
+                entry["explanation_error"] = explanation_error_message(error, provider)
+                if str(getattr(error, "code", "")) == "429":
+                    quota_error = entry["explanation_error"] + " Further explanation requests in this run were skipped."
         log.append(entry)
         if entry["explanation"]:
             print(f"[t={d['state']['time']}] {ACTION_NAMES[d['action']]}: {entry['explanation']}")

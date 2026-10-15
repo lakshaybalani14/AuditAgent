@@ -19,6 +19,7 @@ from stable_baselines3 import DQN
 
 sys.path.insert(0, os.path.dirname(__file__))
 from scheduler_env import SchedulerEnv  # noqa: E402
+from model_compatibility import validate_model_environment  # noqa: E402
 from workload_profiles import normalize_workload_profiles  # noqa: E402
 
 
@@ -60,6 +61,7 @@ def run_episode(env, policy_name, action_for_step, workload_profile, seed, max_s
     queue_age_samples = []
     max_queue_age_samples = []
     starvation_steps = 0
+    scheduler_switches = 0
     action_counts = Counter()
     terminated = False
     steps = 0
@@ -71,6 +73,7 @@ def run_episode(env, policy_name, action_for_step, workload_profile, seed, max_s
         action_counts[ACTION_NAMES[action]] += 1
         observation, reward, terminated, truncated, info = env.step(action)
         total_reward += float(reward)
+        scheduler_switches += int(bool(info.get("scheduler_changed", False)))
         steps += 1
 
         state = env.sim.get_state_summary()
@@ -104,6 +107,7 @@ def run_episode(env, policy_name, action_for_step, workload_profile, seed, max_s
         "mean_observed_queue_age_ticks": _mean(queue_age_samples),
         "max_observed_queue_age_ticks": max(max_queue_age_samples, default=0.0),
         "starvation_steps": starvation_steps,
+        "scheduler_switches": scheduler_switches,
         "processes_completed": len(completed),
         "process_completion_rate": (
             len(completed) / env.max_processes if env.max_processes else 0.0
@@ -144,6 +148,9 @@ def summarize_runs(runs):
             [run["max_observed_queue_age_ticks"] for run in runs]
         ),
         "mean_starvation_steps": _mean([run["starvation_steps"] for run in runs]),
+        "mean_scheduler_switches": _mean(
+            [run.get("scheduler_switches", 0) for run in runs]
+        ),
         "mean_processes_completed": _mean(
             [run["processes_completed"] for run in runs]
         ),
@@ -185,6 +192,8 @@ def evaluate(
     max_processes=10,
     max_steps=10_000,
     workload_profiles=None,
+    switch_penalty=0.1,
+    starvation_penalty=25.0,
 ):
     if episodes <= 0:
         raise ValueError("episodes must be greater than zero")
@@ -198,6 +207,8 @@ def evaluate(
     env = SchedulerEnv(
         max_processes=max_processes,
         workload_profiles=selected_profiles,
+        switch_penalty=switch_penalty,
+        starvation_penalty=starvation_penalty,
     )
     policies = {
         "DQN": lambda observation, step: model.predict(
@@ -210,6 +221,7 @@ def evaluate(
 
     results = {}
     try:
+        validate_model_environment(model, model_path, env)
         for policy_name, action_for_step in policies.items():
             all_runs = []
             by_profile = {}
@@ -248,8 +260,14 @@ def evaluate(
             "max_processes": max_processes,
             "max_steps_per_episode": max_steps,
             "workload_profiles": list(selected_profiles),
+            "switch_penalty": switch_penalty,
+            "starvation_penalty": starvation_penalty,
         },
         "metrics_note": (
+            "Episode return is negative total READY waiting accumulated "
+            "during the episode, with scheduler-switch and starvation "
+            "penalties. The primary comparison metric remains completed-"
+            "process mean waiting time. "
             "Queue-age metrics are sampled from the current ready-queue state. "
             "Completed-process waiting time is accumulated while READY; turnaround "
             "includes CPU and I/O time. CPU utilization uses simulated time from 0."
@@ -271,6 +289,18 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--max-processes", type=int, default=10)
     parser.add_argument("--max-steps", type=int, default=10_000)
+    parser.add_argument(
+        "--starvation-penalty",
+        type=float,
+        default=25.0,
+        help="Use the same starvation cost as training (default: 25).",
+    )
+    parser.add_argument(
+        "--switch-penalty",
+        type=float,
+        default=0.1,
+        help="Use the same scheduler-change reward cost as training (default: 0.1).",
+    )
     parser.add_argument(
         "--workload-profiles",
         default="legacy_random",
@@ -296,6 +326,8 @@ if __name__ == "__main__":
         max_processes=args.max_processes,
         max_steps=args.max_steps,
         workload_profiles=args.resolved_workload_profiles,
+        switch_penalty=args.switch_penalty,
+        starvation_penalty=args.starvation_penalty,
     )
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
