@@ -29,4 +29,4 @@ Keep the runtime paths above stable: the dashboard and backend resolve them dire
 
 ## Preserved root npm files
 
-`local-artifacts/unrelated-root-npm-manifests/` holds the pre-existing root `package.json` and lockfile. They declared an unrelated package named `i`; the active frontend manifest is `dashboard/package.json`. The files were moved here intact so their contents remain available without looking like the frontend's package configuration.
+In this local checkout, `local-artifacts/unrelated-root-npm-manifests/` holds the pre-existing root `package.json` and lockfile. They declared an unrelated package named `i`; the active frontend manifest is `dashboard/package.json`. The files were moved here intact so their contents remain available without looking like the frontend's package configuration.
