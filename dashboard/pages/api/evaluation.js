@@ -1,6 +1,11 @@
 import fs from "fs";
 import path from "path";
-import { findEvaluationReport, findModel } from "../../lib/projectFiles";
+import {
+  findEvaluationReport,
+  findModel,
+  getActiveDecisionLogPath,
+} from "../../lib/projectFiles";
+import { summarizeLiveRun } from "../../lib/liveRunMetrics";
 
 const projectRoot = path.resolve(process.cwd(), "..");
 const sampleReportPath = path.join(
@@ -8,6 +13,21 @@ const sampleReportPath = path.join(
   "sample-data",
   "evaluation_results.sample.json"
 );
+
+function getLatestLiveRun(projectRoot) {
+  const sourcePath = getActiveDecisionLogPath(projectRoot);
+  if (!sourcePath) return null;
+  try {
+    const decisions = JSON.parse(fs.readFileSync(sourcePath, "utf-8"));
+    return summarizeLiveRun(decisions, {
+      source: path.relative(projectRoot, sourcePath),
+      updatedAt: fs.statSync(sourcePath).mtime.toISOString(),
+    });
+  } catch {
+    // A missing or unreadable live trace should not prevent the saved report loading.
+    return null;
+  }
+}
 
 export default function handler(req, res) {
   if (req.method !== "GET") {
@@ -20,11 +40,12 @@ export default function handler(req, res) {
     process.env.NODE_ENV !== "production" &&
     process.env.DASHBOARD_USE_SAMPLE_REPORT === "1";
   const modelPath = findModel(projectRoot);
+  const liveRun = getLatestLiveRun(projectRoot);
   const sourcePath = useSampleReport
     ? sampleReportPath
     : findEvaluationReport(projectRoot, modelPath);
   if (!sourcePath) {
-    return res.status(200).json({ status: "missing", report: null });
+    return res.status(200).json({ status: "missing", report: null, liveRun });
   }
 
   try {
@@ -39,6 +60,7 @@ export default function handler(req, res) {
       modelMatchesSelection: modelPath && typeof report.model_path === "string"
         ? path.resolve(projectRoot, report.model_path) === path.resolve(modelPath)
         : null,
+      liveRun,
       report,
     });
   } catch (error) {

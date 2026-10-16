@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 async function getJson(url) {
   const response = await fetch(url, { cache: "no-store" });
@@ -17,18 +17,22 @@ export default function useDashboardData() {
   const [report, setReport] = useState(null);
   const [reportStatus, setReportStatus] = useState("loading");
   const [reportInfo, setReportInfo] = useState(null);
+  const [liveRun, setLiveRun] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [errors, setErrors] = useState({});
   const [runStatus, setRunStatus] = useState({ status: "idle", message: "" });
+  const refreshRequest = useRef(0);
 
   const refresh = useCallback(async ({ quiet = false } = {}) => {
+    const requestId = ++refreshRequest.current;
     if (!quiet) setLoading(true);
     const results = await Promise.allSettled([
       getJson("/api/decisions"),
       getJson("/api/evaluation"),
       getJson("/api/run"),
     ]);
+    if (requestId !== refreshRequest.current) return;
     const nextErrors = {};
     if (results[0].status === "fulfilled") {
       if (Array.isArray(results[0].value)) setDecisions(results[0].value);
@@ -40,6 +44,7 @@ export default function useDashboardData() {
         setReport(payload.report);
         setReportStatus(payload.status);
         setReportInfo({ source: payload.source, selectedModelPath: payload.selectedModelPath, modelMatchesSelection: payload.modelMatchesSelection });
+        setLiveRun(payload.liveRun && typeof payload.liveRun === "object" ? payload.liveRun : null);
       } else nextErrors.report = "The evaluation API returned an unexpected format.";
     } else nextErrors.report = results[1].reason?.message || "Could not load the evaluation report.";
     if (results[2].status === "fulfilled") {
@@ -72,5 +77,5 @@ export default function useDashboardData() {
     return () => window.clearInterval(interval);
   }, [refresh, runStatus.status]);
 
-  return { decisions, report, reportStatus, reportInfo, loading, lastUpdated, errors, runStatus, refresh, startRun };
+  return { decisions, report, reportStatus, reportInfo, liveRun, loading, lastUpdated, errors, runStatus, refresh, startRun };
 }

@@ -135,10 +135,6 @@
 .page-heading { margin:32px 4px 24px; }
 .page-heading h2 { margin-top:8px; font-size:clamp(30px,4vw,46px); letter-spacing:-.06em; }
 .page-heading > p:last-child { margin-top:9px; color:var(--muted); font-size:13px; line-height:1.6; }
-.overview-report-link { display:flex; justify-content:space-between; align-items:center; gap:15px; margin:24px 4px 0; padding:17px 0; border-top:1px solid var(--line); color:var(--text); text-decoration:none; }
-.overview-report-link span,.overview-report-link b,.overview-report-link small { display:block; }
-.overview-report-link small { margin-top:5px; color:var(--muted); font-size:11px; }
-.overview-report-link > strong { color:var(--accent); font-size:12px; white-space:nowrap; }
 .report-state { margin:14px 4px 24px; padding:20px 0; border-block:1px solid var(--line); }
 .report-state h3 { margin-top:8px; font-size:23px; }
 .report-state p:not(.eyebrow) { max-width:800px; margin-top:10px; color:var(--muted); font-size:13px; line-height:1.7; }
@@ -148,7 +144,7 @@
 .full-decision-log .decision-panel { padding:24px 4px; }
 .full-decision-log .decision-list { max-height:none; overflow:visible; }
 @media(max-width:950px) { .topbar { flex-wrap:wrap; gap:13px; } .page-nav { order:3; width:100%; margin:0; border-top:1px solid var(--line); padding-top:9px; } .topbar-actions { margin-left:auto; } }
-@media(max-width:600px) { .page-nav { justify-content:space-between; } .page-nav-link { padding:9px 8px; font-size:11px; } .topbar-actions { width:100%; justify-content:flex-end; } .topbar-actions .status { margin-right:auto; } .page-refresh-meta { font-size:9px; } .overview-report-link { align-items:flex-start; } }
+@media(max-width:600px) { .page-nav { justify-content:space-between; } .page-nav-link { padding:9px 8px; font-size:11px; } .topbar-actions { width:100%; justify-content:flex-end; } .topbar-actions .status { margin-right:auto; } .page-refresh-meta { font-size:9px; } }
 @media(prefers-reduced-motion:reduce) { .route-content { animation:none; } .page-nav-link { transition:none; } }
 
 
