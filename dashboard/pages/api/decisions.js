@@ -30,8 +30,6 @@ export default function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed." });
   }
 
-  res.setHeader("Cache-Control", "no-store, max-age=0");
-
   try {
     const source = getDecisionsSource();
     const decisions = JSON.parse(fs.readFileSync(source.path, "utf-8"));

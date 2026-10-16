@@ -98,31 +98,16 @@ Claude compatibility.
 
 ## Folder structure and ownership
 
-```
-agentic-scheduler/
-├── simulator/            # Person A — pure OS logic, zero AI
-│   ├── process.py
-│   ├── scheduler_algorithms.py
-│   └── simulator_core.py
-├── rl_agent/             # Person B — RL agent, depends on simulator/
-│   ├── scheduler_env.py
-│   └── train.py
-├── explainability/        # Gemini/Claude explanation providers
-│   └── explainer.py
-├── dashboard/             # Person C — Next.js frontend
-│   ├── pages/index.js
-│   ├── pages/api/decisions.js
-│   ├── components/QueueView.js
-│   └── components/DecisionFeed.js
-└── docs/
-    └── writeup.md
-```
+The current repository layout is documented in [docs/REPOSITORY_GUIDE.md](docs/REPOSITORY_GUIDE.md). The main application areas are:
 
-Build order matters: `simulator/` has zero dependencies and must be
-built first. `rl_agent/` depends on `simulator/`. `explainability/` and
-`dashboard/` can be built in parallel with `rl_agent/`, using fake data,
-and only need to be reconnected to real data at the end.
+- `simulator/` — process model, scheduling policies, and tick-by-tick simulator.
+- `rl_agent/` — Gymnasium environment, training, evaluation, and decision-log generation.
+- `dashboard/` — Next.js pages, API routes, UI components, and client-side hooks.
+- `explainability/` — optional Gemini and offline decision explanations.
+- `tests/` — Python tests for simulator, agent, APIs, and workflow behavior.
+- `docs/` — architecture, workflows, training, demo, design, and workload documentation.
 
+Generated checkpoints and experiment outputs belong under the ignored root `runs/` directory. Dashboard-generated live logs and active-run metadata stay in the root and `.dashboard-data/` paths expected by the application. These runtime paths are intentionally not moved as part of source organization.
 ---
 
 ## `simulator/process.py`
