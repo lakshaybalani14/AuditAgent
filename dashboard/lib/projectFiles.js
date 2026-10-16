@@ -27,7 +27,7 @@ export function findModel(projectRoot) {
 export function resolveDecisionLogPath(projectRoot) {
   return process.env.SCHEDULER_DECISION_LOG_PATH
     ? path.resolve(projectRoot, process.env.SCHEDULER_DECISION_LOG_PATH)
-    : path.join(projectRoot, "decision_log.generated.json");
+    : path.join(projectRoot, "runs", "live-simulator", "decision_log.generated.json");
 }
 
 export function createLiveDecisionLogPath(projectRoot, runId) {

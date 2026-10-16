@@ -19,8 +19,8 @@ This guide maps the active source tree and explains where project files and loca
 
 These locations are generated or machine-specific and are intentionally ignored by Git:
 
-- `runs/` — checkpoints, training metadata, evaluation reports, and monitor CSV files. Keep each experiment in its own named subfolder so seeds and training runs remain distinguishable.
-- `decision_log.generated*.json` — generated decision logs written where the dashboard expects them.
+- `runs/` — checkpoints, training metadata, evaluation reports, monitor CSV files, and simulator output. Keep each experiment in its own named subfolder so seeds and training runs remain distinguishable; live dashboard runs go in `runs/live-simulator/`.
+- `runs/live-simulator/decision_log.generated.live-<run-id>.json` — a separate decision log for each live simulator run.
 - `.dashboard-data/` — active live-run pointer and dashboard runtime state.
 - `.venv/`, `dashboard/node_modules/`, and `dashboard/.next/` — local Python/Node dependencies and Next.js build output.
 - `dashboard/.env.local` — local API credentials and settings. Never commit this file or put credentials in source files.

@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 5695)
+Total output lines: 459
+
 # Agentic Adaptive Process Scheduler — Build Spec
 
 This README describes every file in this project in enough detail that
@@ -64,7 +67,7 @@ checks the seed-123 checkpoint and project-root model paths. Set
 `SCHEDULER_MODEL_PATH` before starting Next.js to choose another checkpoint.
 The matching report is loaded from that model's run folder; override it with
 `SCHEDULER_EVALUATION_PATH` when needed. Fresh dashboard decisions go to
-unique `decision_log.generated.live-<run-id>.json` files, preserving both the
+unique `runs/live-simulator/decision_log.generated.live-<run-id>.json` files, preserving both the
 sample log and earlier generated runs. `.dashboard-data/active-decision-log.json`
 points the dashboard to the latest run. Set `SCHEDULER_DECISION_LOG_PATH` to
 choose the directory and filename prefix for those run files. While a run is
@@ -107,7 +110,7 @@ The current repository layout is documented in [docs/REPOSITORY_GUIDE.md](docs/R
 - `tests/` — Python tests for simulator, agent, APIs, and workflow behavior.
 - `docs/` — architecture, workflows, training, demo, design, and workload documentation.
 
-Generated checkpoints and experiment outputs belong under the ignored root `runs/` directory. Dashboard-generated live logs and active-run metadata stay in the root and `.dashboard-data/` paths expected by the application. These runtime paths are intentionally not moved as part of source organization.
+Generated checkpoints and experiment outputs belong under the ignored root `runs/` directory. Live simulator decision logs are grouped in `runs/live-simulator/`; active-run metadata remains under `.dashboard-data/`. These runtime paths are intentionally ignored by Git and managed by the application.
 ---
 
 ## `simulator/process.py`
@@ -197,59 +200,7 @@ wraps. This is the main Operating-Systems deliverable.
 - Constants: `ALGO_ROUND_ROBIN = 0`, `ALGO_PRIORITY = 1`, `ALGO_MLFQ = 2`,
   `STARVATION_THRESHOLD = 50` (ticks; tune based on process sizes).
 - Class `SimulatorCore(max_processes=10, quantum=2)`:
-  - `reset()`: reinitializes `time = 0`, `current_algo = ALGO_ROUND_ROBIN`,
-    empty `ready_queue`, empty `completed`, generates a fresh randomized
-    batch of processes via `_generate_process_batch()`, and admits any
-    that have already "arrived" at time 0.
-  - `_generate_process_batch()`: returns `max_processes` random
-    `Process` objects — random `arrival_time` (e.g. 0–20), `burst_time`
-    (e.g. 2–15), `priority` (e.g. 0–3), and `is_io_bound` (~30% chance
-    True). Sorted by arrival time. Randomization matters so the RL
-    agent generalizes instead of memorizing one fixed scenario.
-  - `_admit_arrivals()`: moves any pending processes whose
-    `arrival_time <= self.time` from a pending list into `ready_queue`.
-  - `get_state_summary()`: returns a dict with `time`, `queue_length`,
-    `avg_wait_time`, `max_wait_time` (both computed from
-    `time - p.last_ready_time` across the ready queue), `num_io_bound`,
-    `num_cpu_bound`, `current_algo`, and `is_starving`
-    (`max_wait_time > STARVATION_THRESHOLD`). This exact shape is what
-    both `scheduler_env.py` and `explainer.py` depend on — don't rename
-    keys without updating both.
-  - `apply_action(action)`: interprets an integer 0–4:
-    - `0` = no change
-    - `1` = switch `current_algo` to Round Robin
-    - `2` = switch to Priority
-    - `3` = switch to MLFQ
-    - `4` = find the longest-waiting process in `ready_queue` and lower
-      its `priority` number by 1 (bounded at 0)
-  - `tick()`: admits arrivals, then — if `ready_queue` is non-empty —
-    picks the next process according to `current_algo` (sort by
-    priority if `ALGO_PRIORITY`), runs it for
-    `min(quantum, remaining_time)`, advances `self.time`, re-admits any
-    new arrivals, and either marks it completed (compute
-    `waiting_time`) or updates `last_ready_time` and pushes it to the
-    back of the queue. Returns `True` if a process finished this tick,
-    else `False`.
-  - `is_episode_done()`: `True` when both `ready_queue` and any pending
-    (not-yet-arrived) processes are empty.
-
-**Expected behavior when run standalone:** loop calling `tick()` and
-printing `get_state_summary()` until `is_episode_done()`, completing in
-well under 100 ticks for `max_processes=5`.
-
----
-
-## `rl_agent/scheduler_env.py`
-
-**Purpose:** Wraps `SimulatorCore` in the Gym API (`reset()` / `step()`)
-so any Gym-compatible RL library (Stable-Baselines3) can train against
-it without knowing anything about scheduling internals.
-
-**Build spec:**
-- Class `SchedulerEnv(gym.Env)`:
-  - `__init__(max_processes=10)`: sets `action_space = spaces.Discrete(5)`
-    (matching `SimulatorCore.apply_action`'s 5 actions) and
-    `observation_space = spaces.Box(low=0, high=np.inf, shape=(7,), dtype=np.float32)`.
+  - `reset()`: reinitializes…695 tokens truncated…at32)`.
     Instantiates a `SimulatorCore`.
   - `reset()`: calls `self.sim.reset()`, returns `_state_to_array()`.
   - `step(action)`: calls `self.sim.apply_action(action)`, then

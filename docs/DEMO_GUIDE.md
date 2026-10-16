@@ -86,7 +86,7 @@ Point to one timeline entry and walk through this sequence:
 
 The dashboard chooses `runs/dqn-learning-v2-seed-42/best_model.zip` when it is
 present. It looks for an `evaluation.json` beside that model. Every live run
-gets its own `decision_log.generated.live-<run-id>.json` file, so the original
+gets its own `runs/live-simulator/decision_log.generated.live-<run-id>.json` file, so the original
 sample log and earlier runs remain available. A small ignored pointer in
 `.dashboard-data/` selects the latest run for the dashboard. You can override
 the model and evaluation report before starting Next.js:
