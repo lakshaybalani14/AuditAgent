@@ -73,7 +73,7 @@ export default function DashboardNavbar({ pathname, darkMode, onToggleTheme, onR
         </Link>)}
       </nav>
       <div className="navbar-actions">
-        {showRunControls && <Button3D className="run-button navbar-run-button" onClick={() => { setMenuOpen(false); onRun(); }} busy={runStatus?.status === "running"} disabled={runStatus?.status === "running" || runStatus?.modelAvailable === false} title={runStatus?.modelAvailable === false ? "A trained model checkpoint is required" : undefined}>{runButtonLabel}</Button3D>}
+        {showRunControls && <Button3D className="run-button navbar-run-button" onClick={() => { setMenuOpen(false); onRun(); }} busy={runStatus?.status === "running"} disabled={runStatus?.status === "running" || (runStatus?.modelAvailable === false && runStatus?.status !== "failed")} title={runStatus?.status === "failed" ? runStatus.message : runStatus?.modelAvailable === false ? "A trained model checkpoint is required" : undefined}>{runButtonLabel}</Button3D>}
         <button className="icon-button navbar-theme-button" onClick={onToggleTheme} aria-label="Toggle colour theme">{darkMode ? "☼" : "◐"}</button>
         <button ref={menuButtonRef} className="navbar-menu-toggle" onClick={() => setMenuOpen((value) => !value)} aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"} aria-expanded={menuOpen} aria-controls={menuId}>
           <span /><span /><span />
@@ -82,3 +82,4 @@ export default function DashboardNavbar({ pathname, darkMode, onToggleTheme, onR
     </div>
   </header>;
 }
+

@@ -25,7 +25,11 @@ export default function DashboardLayout({ children, statusLabel, lastUpdated, er
     ? explaining
       ? `Explaining ${runStatus.explanationsCompleted || 0}/${runStatus.explanationsTotal}`
       : `Running ${runStatus.decisionsCompleted || 0}/${runStatus.decisionsTotal || 15}`
-    : "Run live simulation";
+    : runStatus?.status === "succeeded"
+      ? "Run completed · Run again"
+      : runStatus?.status === "failed"
+        ? "Run failed · Retry"
+        : "Run live simulation";
   const runFilesAndSettings = <details className="run-feedback-details"><summary>Run files and settings</summary>
     <div className="run-settings-meta">
       <p className={errorText ? "settings-run-status status-error" : "settings-run-status"}><i aria-hidden="true" />{errorText ? "Connection issue" : statusLabel}</p>
@@ -50,3 +54,4 @@ export default function DashboardLayout({ children, statusLabel, lastUpdated, er
     </main>
   );
 }
+

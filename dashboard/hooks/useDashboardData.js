@@ -61,7 +61,14 @@ export default function useDashboardData() {
     } else nextErrors.report = results[1].reason?.message || "Could not load the evaluation report.";
     if (results[2].status === "fulfilled") {
       const payload = results[2].value;
-      if (payload && typeof payload === "object" && typeof payload.status === "string") setRunStatus(payload);
+      if (payload && typeof payload === "object" && typeof payload.status === "string") {
+        setRunStatus((current) => {
+          // The hosted model endpoint reports readiness, not the result of the
+          // browser's POST run. Keep the POST result (or error) while polling.
+          if (["idle", "ready"].includes(payload.status) && current.status !== "idle") return current;
+          return payload;
+        });
+      }
       else nextErrors.run = "The Run API returned an unexpected format.";
     } else nextErrors.run = results[2].reason?.message || "Could not load scheduler run status.";
     setErrors(nextErrors);
@@ -104,3 +111,4 @@ export default function useDashboardData() {
 
   return { decisions, report, reportStatus, reportInfo, liveRun, loading, lastUpdated, errors, runStatus, refresh, startRun };
 }
+
