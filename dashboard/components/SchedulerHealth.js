@@ -1,8 +1,9 @@
 import AnimatedNumber from "./AnimatedNumber";
+import FlapHeadingText from "./FlapHeadingText";
 
 export default function SchedulerHealth({ state, interventions = 0 }) {
   return <section className="scheduler-health" aria-labelledby="scheduler-health-title">
-    <div className="health-heading"><h3 id="scheduler-health-title">Scheduler health</h3><p>After the latest recorded action</p></div>
+    <div className="health-heading"><h3 id="scheduler-health-title"><FlapHeadingText>Scheduler health</FlapHeadingText></h3><p>After the latest recorded action</p></div>
     <div className="health-card-grid">
       <article className="health-card"><span>Ready queue depth</span><strong><AnimatedNumber value={state?.queue_length} /></strong><small>processes ready to run</small></article>
       <article className="health-card"><span>Average queue age</span><strong><AnimatedNumber value={state?.avg_wait_time} digits={1} /></strong><small>ticks in ready queue</small></article>

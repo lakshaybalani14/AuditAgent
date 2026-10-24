@@ -85,6 +85,53 @@
 .process-table { font-size: 11px; }
 .process-table th, .process-table td { padding: 9px 6px; }
 .process-table-heading { margin-bottom: 11px; }
+.queue-panel .bound-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+}
+.queue-panel .bound-grid > div {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  gap: 8px;
+}
+.queue-panel .bound-grid > div:nth-child(2) {
+  margin-left: 0;
+  padding-left: 0;
+  border-left: 0;
+}
+.queue-panel .bound-grid .dot { margin-right: 0; }
+.queue-panel .bound-grid b { margin-left: 0; float: none; }
+.queue-panel .bound-grid .bound-count {
+  display: inline-grid;
+  flex: 0 0 25px;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  margin-left: 0;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-radius: 50%;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.queue-panel .bound-grid .io-count { color: #78a8d9; background: color-mix(in srgb, #78a8d9 12%, var(--surface)); }
+.queue-panel .bound-grid .cpu-count { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.queue-panel .queue-slot.active.io { border-color: #78a8d9; background: #78a8d9; }
+.queue-panel .queue-slot.active.cpu { border-color: var(--accent); background: var(--accent); }
+.queue-panel .process-table { min-width: 560px; border-collapse: collapse; }
+.queue-panel .process-table th,
+.queue-panel .process-table td { padding: 11px 9px; border-top: 0; border-bottom: 1px solid var(--line); }
+.queue-panel .process-table thead th { height: 38px; font-size: 9px; font-weight: 650; letter-spacing: .08em; }
+.queue-panel .process-table tbody tr { transition: background-color .16s ease; }
+.queue-panel .process-table tbody tr:hover { background: color-mix(in srgb, var(--surface2) 65%, transparent); }
+.queue-panel .process-table tbody tr:last-child th,
+.queue-panel .process-table tbody tr:last-child td { border-bottom: 0; }
+.queue-panel .process-table tbody th { font-weight: 600; font-variant-numeric: tabular-nums; }
+.queue-panel .process-state,
+.queue-panel .process-type { display: inline-flex; align-items: center; min-height: 22px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 999px; font-size: 9px; line-height: 1; white-space: nowrap; }
+.queue-panel .process-state { background: var(--surface2); }
+.queue-panel .process-type-io { color: #78a8d9; border-color: color-mix(in srgb, #78a8d9 32%, var(--line)); background: color-mix(in srgb, #78a8d9 10%, var(--surface)); }
+.queue-panel .process-type-cpu { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 32%, var(--line)); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
 .orbit-detail { min-width: 0; }
 .orbit-explanation { overflow-wrap: anywhere; }
 .dashboard-grid .orbit-layout { grid-template-columns: 1fr; gap: 8px; }
@@ -94,8 +141,6 @@
   from { transform: translate(-50%, -50%) rotate(0deg); }
   to { transform: translate(-50%, -50%) rotate(360deg); }
 }
-.overview-report-link { margin-top: 36px; padding-top: 22px; }
-
 .page-heading { margin: 36px 4px 27px; }
 .page-heading > p:last-child { max-width: 720px; }
 .full-decision-log { margin-top: 0; border-top: 0; }
@@ -189,24 +234,28 @@
 .pipeline-detail p:not(.eyebrow) { font-size: 13px; }
 .pipeline-footnote { margin-top: 16px; }
 
-.run-config, .policy-panel, .profile-card {
+.policy-panel, .profile-card {
   padding: 24px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--surface);
 }
-.run-config, .policy-panel { margin-bottom: 20px; }
+.policy-panel { margin-bottom: 20px; }
 .profile-grid { gap: 20px; }
 .profile-card { padding: 22px; }
-.config-grid { gap: 12px; }
-.config-grid div { padding: 14px; }
 .policy-table th, .policy-table td { padding: 14px 12px; }
 .profile-row { padding: 12px; }
 .report-state { margin-top: 0; padding: 24px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
-.report-provenance { margin-top: 18px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); font-size: 11px; line-height: 1.6; }
-.report-provenance strong { color: var(--text); }
-.report-provenance p + p { margin-top: 5px; }
-.report-provenance code { overflow-wrap: anywhere; }
+.live-run-panel { margin: 0 0 20px; padding: 24px; border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--line)); border-radius: 14px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 7%, var(--surface)), var(--surface)); }
+.live-run-panel .panel-heading { margin-bottom: 16px; }
+.live-run-active { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.live-run-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.live-run-metrics > div { min-width: 0; padding: 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.live-run-metrics span, .live-run-metrics strong { display: block; }
+.live-run-metrics span { color: var(--muted); font-size: 10px; line-height: 1.4; }
+.live-run-metrics strong { margin-top: 7px; overflow-wrap: anywhere; font-size: 16px; font-variant-numeric: tabular-nums; }
+.live-run-footer { display: flex; justify-content: space-between; gap: 12px; margin-top: 14px; color: var(--muted); font-size: 11px; }
+.live-run-note { margin-top: 12px; color: var(--muted); font-size: 11px; line-height: 1.55; }
 .policy-table caption { padding: 0 0 14px; text-align: left; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .policy-table td { font-variant-numeric: tabular-nums; }
 
@@ -244,6 +293,8 @@
   .decision-state, .decision-outcome > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .q-value-list { grid-template-columns: 1fr; }
   .profile-grid { grid-template-columns: 1fr; }
+  .live-run-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .live-run-footer { flex-direction: column; }
   .activity-log-header { padding: 17px 16px; gap: 10px; }
   .activity-log-header .feed-count { font-size: 9px; }
   .activity-log .activity-event-button { grid-template-columns: 34px minmax(0, 1fr) 12px; gap: 8px 11px; padding: 18px 16px; }
@@ -269,7 +320,5 @@
   .decision-detail { margin-left: 0; margin-right: 0; padding: 14px; }
   .decision-state { gap: 7px; }
   .scheduler-pipeline { padding: 0 14px; }
-  .run-config, .policy-panel, .profile-card { padding: 18px; }
-  .run-config .panel-heading { display: grid; justify-content: stretch; gap: 10px; }
-  .run-config .feed-count { justify-self: start; }
+  .policy-panel, .profile-card { padding: 18px; }
 }

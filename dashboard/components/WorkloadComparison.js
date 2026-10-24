@@ -1,5 +1,8 @@
 import { Fragment, useState } from "react";
 import { formatMetric, formatPercent, isMetric } from "../lib/evaluationDisplay";
+import AnimatedContent from "./AnimatedContent";
+
+const revealProps = { distance: 100, direction: "vertical", duration: 0.8, ease: "power3.out", blur: 0, stagger: 0.08, threshold: 0.1 };
 
 const METRIC_GROUPS = [
   {
@@ -39,7 +42,7 @@ export default function WorkloadComparison({ entries, configuredProfiles = [] })
   ])].filter((profile) => entries.some(([, result]) => result?.by_profile?.[profile]));
   const activeProfile = profiles.includes(selectedProfile) ? selectedProfile : profiles[0];
 
-  return <section className="workload-comparison panel" aria-labelledby="workload-comparison-title">
+  return <AnimatedContent {...revealProps} as="section" className="workload-comparison panel" aria-labelledby="workload-comparison-title">
     <div className="workload-comparison-intro">
       <span className="workload-comparison-badge">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6m8 4v6" /></svg>
@@ -88,5 +91,5 @@ export default function WorkloadComparison({ entries, configuredProfiles = [] })
       </div>
       <p className="workload-comparison-note">Check marks identify the lowest or highest recorded averages for each row, including ties. They do not establish statistical significance or an overall winning scheduler. Missing metrics appear as —.</p>
     </>}
-  </section>;
+  </AnimatedContent>;
 }

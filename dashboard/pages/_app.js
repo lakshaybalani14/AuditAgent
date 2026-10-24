@@ -9,6 +9,8 @@ import "../styles/policy-radar.css";
 import "../styles/overview.css";
 import "../styles/split-flap.css";
 import "../styles/pipeline-motion.css";
+import "../styles/run-trace.css";
+import "../styles/animated-content.css";
 export default function App({ Component, pageProps }) {
   const router = useRouter();
   const [openingPage, setOpeningPage] = useState(false);
@@ -22,5 +24,5 @@ export default function App({ Component, pageProps }) {
     router.events.on("routeChangeError", failed);
     return () => { router.events.off("routeChangeStart", start); router.events.off("routeChangeComplete", complete); router.events.off("routeChangeError", failed); };
   }, [router.events]);
-  return <><Head><title>AuditAgent</title></Head>{openingPage && <div className="route-load-indicator" role="status"><span>Opening page…</span></div>}{navigationError && <div className="route-navigation-error" role="alert">The page could not open. Please select it again.</div>}<Component {...pageProps} /></>;
+  return <><Head><title>AuditAgent</title><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" /><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" /></Head>{openingPage && <div className="route-load-indicator" role="status"><span>Opening page…</span></div>}{navigationError && <div className="route-navigation-error" role="alert">The page could not open. Please select it again.</div>}<Component {...pageProps} /></>;
 }

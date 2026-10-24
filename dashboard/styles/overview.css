@@ -5,10 +5,13 @@
 .settings-run-status i { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
 .settings-run-status.status-error i { background: #e26e5a; }
 .run-settings-meta time { color: var(--text); font-variant-numeric: tabular-nums; }
-.overview-run-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 30px; align-items: stretch; }
+.overview-run-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 30px; align-items: stretch; padding: 20px 0 24px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.overview-section-index { grid-column: 1 / -1; margin-bottom: -18px; }
+.overview-run-grid > .animated-content-child { min-width: 0; }
+.overview-run-grid > .animated-content-child:last-child { display: flex; }
 .scheduler-health { min-width: 0; }
-.health-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
-.health-heading h3 { font-size: 20px; letter-spacing: -.03em; }
+.health-heading { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; margin-bottom: 18px; }
+.health-heading h3 { font-size: 24px; letter-spacing: 0; line-height: 1.35; }
 .health-heading p { color: var(--muted); font-size: 10px; }
 .health-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .health-card { display: flex; flex-direction: column; min-width: 0; min-height: 145px; padding: 20px; border: 1px solid var(--line); border-radius: 20px; background: linear-gradient(140deg, var(--surface), var(--bg)); box-shadow: 0 4px 14px #00000006; transition: border-color .2s ease, box-shadow .2s ease; }
@@ -24,12 +27,15 @@
 .health-risk.has-risk { border-color: #e26e5a66; }
 .animated-number { font-variant-numeric: tabular-nums; }
 .health-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-.overview-run-grid > .action-chart { min-width: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
-.overview-run-grid .action-chart .panel-heading { margin: 0 0 18px; min-height: 25px; }
-.overview-run-grid .action-chart .panel-heading h3 { margin: 0; font-size: 20px; letter-spacing: -.03em; }
-.overview-run-grid .action-bars { gap: 32px; padding-top: 28px; }
+.overview-run-grid .action-chart { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
+.overview-run-grid .action-chart .panel-heading { align-items: flex-start; margin: 0 0 18px; min-height: 0; padding-top: 0; }
+.overview-run-grid .action-chart .panel-heading h3 { margin: 0; font-size: 22px; line-height: 1.35; letter-spacing: 0; }
+.overview-run-grid .action-bars { display: flex; flex: 1; flex-direction: column; justify-content: space-between; gap: 24px; padding: 28px 0 0; }
+.overview-run-grid .action-bar-row { grid-template-columns: 100px minmax(0, 1fr) 70px; padding-block: 2px; }
+.overview-run-grid .action-bar-row > b { display: flex; justify-content: flex-end; align-items: baseline; gap: 7px; }
+.overview-run-grid .action-bar-row > b small { color: var(--muted); font-size: 10px; font-weight: 500; }
 .overview-run-grid .action-track i { transition: width .5s ease; }
-@media (max-width: 980px) { .overview-run-grid { grid-template-columns: minmax(0, 1fr); gap: 28px; } .overview-run-grid .action-bars { padding-top: 8px; } }
+@media (max-width: 980px) { .overview-run-grid { grid-template-columns: minmax(0, 1fr); gap: 28px; } .overview-run-grid > .animated-content-child:last-child { display: block; } .overview-run-grid .action-chart { display: block; } .overview-run-grid .action-bars { display: grid; flex: initial; gap: 24px; padding-top: 8px; } }
 @media (max-width: 480px) {
   .health-heading { flex-direction: column; gap: 6px; }
   .health-card-grid { gap: 10px; }
@@ -38,16 +44,6 @@
   .health-card > small { font-size: 9px; }
 }
 @media (prefers-reduced-motion: reduce) { .health-card, .overview-run-grid .action-track i { transition: none; } }
-
-/* Align the two live scheduler panels and the paired process activity heading. */
-.overview-run-grid { align-items: stretch; }
-.overview-run-grid .action-chart { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
-.overview-run-grid .action-chart .panel-heading { align-items: flex-start; margin: 0 0 18px; min-height: 0; padding-top: 0; }
-.overview-run-grid .action-chart .panel-heading h3 { margin: 0; font-size: 22px; line-height: 1.35; letter-spacing: 0; }
-.overview-run-grid .action-bars { display: flex; flex: 1; flex-direction: column; justify-content: space-between; gap: 24px; padding: 28px 0 0; }
-.overview-run-grid .action-bar-row { grid-template-columns: 100px minmax(0, 1fr) 70px; padding-block: 2px; }
-.overview-run-grid .action-bar-row > b { display: flex; justify-content: flex-end; align-items: baseline; gap: 7px; }
-.overview-run-grid .action-bar-row > b small { color: var(--muted); font-size: 10px; font-weight: 500; }
 .process-section-heading { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); align-items: start; }
 .process-section-heading .agent-activity-heading { position: relative; top: 19px; left: 4px; min-width: 0; }
 .process-section-heading .agent-activity-heading h3 { margin: 0; font-size: 22px; line-height: 1.35; letter-spacing: 0; }
@@ -57,11 +53,4 @@
 .process-section-heading .agent-activity-heading p { margin-top: 7px; color: var(--muted); font-size: 10px; line-height: 15px; }
 .orbital-panel .orbit-panel-top-space { height: 69px; }
 .dashboard-grid .orbit-layout { align-items: start; }
-@media (max-width: 980px) {
-  .overview-run-grid .action-chart { display: block; }
-  .overview-run-grid .action-bars { display: grid; flex: initial; gap: 24px; padding-top: 8px; }
-}
-@media (max-width: 780px) {
-  .process-section-heading { display: block; }
-  .process-section-heading .agent-activity-heading { top: 0; left: 0; margin-top: 16px; }
-}
+@media (max-width: 780px) { .process-section-heading { display: block; } .process-section-heading .agent-activity-heading { top: 0; left: 0; margin-top: 16px; } }
