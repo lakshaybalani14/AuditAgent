@@ -20,7 +20,6 @@ export default function DashboardLayout({ children, statusLabel, lastUpdated, er
   const time = lastUpdated?.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) || "—";
   const explanationReady = Boolean(runStatus?.explanationReady);
   const explanationProvider = runStatus?.explanationProvider || "offline";
-  const explaining = running && runStatus?.decisionsCompleted >= runStatus?.decisionsTotal && runStatus?.explanationsTotal > 0;
   const runButtonLabel = running
     ? explaining
       ? `Explaining ${runStatus.explanationsCompleted || 0}/${runStatus.explanationsTotal}`
@@ -43,17 +42,7 @@ export default function DashboardLayout({ children, statusLabel, lastUpdated, er
     <main className={darkMode ? "app-shell dark" : "app-shell"}>
       <div className="app-frame">
         <DashboardNavbar pathname={router.pathname} darkMode={darkMode} onToggleTheme={toggleTheme} onRun={onRun} showRunControls={showRunControls} runStatus={runStatus} runButtonLabel={runButtonLabel} />
-        {showRunDetails && (runStatus?.message || runStatus?.modelPath) ? (
-          <div className={runStatus.status === "failed" || runStatus.status === "model_missing" ? "run-feedback run-feedback-error" : "run-feedback"}>
-            <div className="run-feedback-main" role="status">
-              <strong>{runStatus.message || "Ready to run the selected checkpoint."}</strong>
-              {runStatus.status === "running" && <span>Decision {runStatus.decisionsCompleted || 0} of {runStatus.decisionsTotal || 15}{runStatus.latestAction ? ` · ${runStatus.latestAction} at tick ${runStatus.latestSimulationTime}` : ""}</span>}
-              {explaining && <span>Explanations {runStatus.explanationsCompleted || 0} of {runStatus.explanationsTotal}</span>}
-              {runStatus.latestExplanationStatus && <span>Latest explanation: {runStatus.latestExplanationStatus}</span>}
-            </div>
-            {runFilesAndSettings}
-          </div>
-        ) : <div className="run-settings-only">{runFilesAndSettings}</div>}
+        {!showRunDetails && <div className="run-settings-only">{runFilesAndSettings}</div>}
         {errorText && <div className="error-banner" role="alert"><span>{errorText}</span><button onClick={() => onRefresh()}>Retry</button></div>}
         <div className="route-content" key={router.pathname}>{children}</div>
       </div>
