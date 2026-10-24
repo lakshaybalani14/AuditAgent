@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 async function getJson(url) {
   const response = await fetch(url, { cache: "no-store" });
@@ -13,7 +13,20 @@ async function getJson(url) {
 }
 
 export default function useDashboardData() {
-  const [decisions, setDecisions] = useState([]);
+  const clientRunDecisions = useRef(false);
+  const [decisions, setDecisions] = useState(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const saved = JSON.parse(window.localStorage.getItem("auditagent:last-run") || "null");
+      if (Array.isArray(saved) && saved.length) {
+        clientRunDecisions.current = true;
+        return saved;
+      }
+    } catch {
+      window.localStorage.removeItem("auditagent:last-run");
+    }
+    return [];
+  });
   const [report, setReport] = useState(null);
   const [reportStatus, setReportStatus] = useState("loading");
   const [reportInfo, setReportInfo] = useState(null);
