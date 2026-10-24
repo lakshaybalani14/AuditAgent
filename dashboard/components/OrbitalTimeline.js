@@ -24,15 +24,12 @@ export default function OrbitalTimeline({ decisions = [], loading = false, runSt
   const runLabel = runStatus?.status === "running" ? "LIVE" : events.some((event) => event?.source === "sample_preview") ? "SAMPLE" : "SAVED";
 
   if (!events.length) {
-    return <section className="panel orbital-panel"><p className="eyebrow">AGENT ACTIVITY</p><h3>Decision orbit</h3><p className="chart-empty">{loading ? "Waiting for decisions…" : "No decisions recorded for this run yet."}</p></section>;
+    return <section className="panel orbital-panel"><div className="orbit-panel-top-space" aria-hidden="true" /><p className="chart-empty">{loading ? "Waiting for decisions…" : "No decisions recorded for this run yet."}</p></section>;
   }
 
   return (
     <section className="panel orbital-panel">
-      <div className="panel-heading">
-        <div><p className="eyebrow">AGENT ACTIVITY</p><h3>Decision orbit</h3></div>
-        <span className="feed-count">Latest {events.length} / {decisions.length}</span>
-      </div>
+      <div className="orbit-panel-top-space" aria-hidden="true" />
       <div className="orbit-layout">
         <div className="orbit-stage" aria-label="Recent scheduler decisions arranged around the run">
           <div className="orbit-ring orbit-ring-outer" />
