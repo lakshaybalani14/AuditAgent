@@ -408,3 +408,6 @@ written progressively, not left until the end.
    `state`/`action` pair — not yet built in this repo).
 7. `docs/writeup.md`, filled in last, once real results exist to
    describe.
+
+
+For the Vercel deployment and hosted trained-model setup, see [docs/VERCEL_DEPLOYMENT.md](docs/VERCEL_DEPLOYMENT.md).
