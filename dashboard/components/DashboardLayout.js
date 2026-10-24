@@ -20,6 +20,7 @@ export default function DashboardLayout({ children, statusLabel, lastUpdated, er
   const time = lastUpdated?.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) || "—";
   const explanationReady = Boolean(runStatus?.explanationReady);
   const explanationProvider = runStatus?.explanationProvider || "offline";
+  const explaining = running && runStatus?.decisionsCompleted >= runStatus?.decisionsTotal && runStatus?.explanationsTotal > 0;
   const runButtonLabel = running
     ? explaining
       ? `Explaining ${runStatus.explanationsCompleted || 0}/${runStatus.explanationsTotal}`
@@ -49,3 +50,4 @@ export default function DashboardLayout({ children, statusLabel, lastUpdated, er
     </main>
   );
 }
+
