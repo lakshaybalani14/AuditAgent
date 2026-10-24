@@ -25,7 +25,13 @@ export default function Overview() {
       <RunCharts decisions={data.decisions} />
     </section>
     <section className="page-section" aria-labelledby="process-heading">
-      <div className="section-heading"><div><p className="eyebrow">03 · PROCESS VIEW</p><h3 id="process-heading">Processes and recent choices</h3></div><p>Select a timeline tick to inspect the action taken at that moment.</p></div>
+      <div className="section-heading process-section-heading">
+        <div><p className="eyebrow">03 · PROCESS VIEW</p><h3 id="process-heading"><FlapHeadingText>Processes and recent choices</FlapHeadingText></h3></div>
+        <div className="agent-activity-heading">
+          <div className="agent-activity-title-row"><h3><FlapHeadingText>Agent activity</FlapHeadingText></h3><span className="feed-count">Latest {Math.min(8, data.decisions.length)} / {data.decisions.length}</span></div>
+          <p>Click the orbital to view the step.</p>
+        </div>
+      </div>
       <div className="dashboard-grid"><QueueView state={latestState} decisions={data.decisions} /><OrbitalTimeline decisions={data.decisions} loading={data.loading} runStatus={data.runStatus} /></div>
     </section>
     <Link href="/evaluation" className="overview-report-link"><span><b>{data.report ? "Evaluation report ready" : "Evaluation report not available yet"}</b><small>{data.report ? "Open policy comparisons and workload results" : "The Overview and Decision log work while waiting for the trained model"}</small></span><strong>{data.report ? "View evaluation →" : "Why? →"}</strong></Link>
