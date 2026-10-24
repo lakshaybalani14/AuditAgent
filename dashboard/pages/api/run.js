@@ -225,7 +225,7 @@ function startRun(projectRoot, modelPath) {
 }
 
 export default async function handler(req, res) {
-  const modelApiUrl = (process.env.SCHEDULER_MODEL_API_URL || "").replace(/\\/+$/, "");
+  const modelApiUrl = (process.env.SCHEDULER_MODEL_API_URL || "").replace(/\/+$/, "");
   if (modelApiUrl) {
     if (req.method === "GET") {
       try {
