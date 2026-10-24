@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { summarizeLiveRun } from "../lib/liveRunMetrics";
 
 async function getJson(url) {
   const response = await fetch(url, { cache: "no-store" });
@@ -93,5 +94,13 @@ export default function useDashboardData() {
     return () => window.clearInterval(interval);
   }, [refresh, runStatus.status]);
 
-  return { decisions, report, reportStatus, reportInfo, loading, lastUpdated, errors, runStatus, refresh, startRun };
+  const liveRun = useMemo(() => {
+    if (!decisions.length || decisions.some((decision) => decision?.source === "sample_preview")) return null;
+    return summarizeLiveRun(decisions, {
+      source: runStatus?.id ? `auditagent.live-${runStatus.id}` : null,
+      updatedAt: lastUpdated?.toISOString?.() || null,
+    });
+  }, [decisions, lastUpdated, runStatus?.id]);
+
+  return { decisions, report, reportStatus, reportInfo, liveRun, loading, lastUpdated, errors, runStatus, refresh, startRun };
 }

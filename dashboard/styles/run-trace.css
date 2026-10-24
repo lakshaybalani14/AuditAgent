@@ -1,0 +1,17 @@
+.run-feedback-details { position: relative; color: var(--muted); font-size: 10px; }
+.run-feedback-details summary { padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; cursor: pointer; white-space: nowrap; }
+.run-trace-settings { position: absolute; z-index: 8; top: calc(100% + 7px); right: 0; width: min(370px, 80vw); padding: 12px 14px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); box-shadow: 0 12px 30px #0003; }
+.run-trace-settings p { margin: 0 0 8px; line-height: 1.5; overflow-wrap: anywhere; }
+.run-trace-settings code { color: var(--text); font-size: 9px; overflow-wrap: anywhere; }
+.run-trace-settings pre { max-height: 180px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); }
+.overview-shell.app-shell .app-frame { padding-top: 104px; }
+.overview-shell .hero { margin-top: 6px; }
+.overview-run-settings { margin-top: 10px; }
+.overview-run-settings .run-trace-settings { right: 0; }
+@media (max-width: 880px) {
+  .overview-shell.app-shell .app-frame { padding-top: 92px; }
+  .overview-shell .hero { margin-top: 4px; }
+}
+@media (max-width: 600px) {
+  .run-trace-settings { left: auto; right: 0; width: min(370px, 90vw); }
+}
