@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 async function getJson(url) {
   const response = await fetch(url, { cache: "no-store" });
@@ -13,7 +13,20 @@ async function getJson(url) {
 }
 
 export default function useDashboardData() {
-  const [decisions, setDecisions] = useState([]);
+  const clientRunDecisions = useRef(false);
+  const [decisions, setDecisions] = useState(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const saved = JSON.parse(window.localStorage.getItem("auditagent:last-run") || "null");
+      if (Array.isArray(saved) && saved.length) {
+        clientRunDecisions.current = true;
+        return saved;
+      }
+    } catch {
+      window.localStorage.removeItem("auditagent:last-run");
+    }
+    return [];
+  });
   const [report, setReport] = useState(null);
   const [reportStatus, setReportStatus] = useState("loading");
   const [reportInfo, setReportInfo] = useState(null);
@@ -31,7 +44,10 @@ export default function useDashboardData() {
     ]);
     const nextErrors = {};
     if (results[0].status === "fulfilled") {
-      if (Array.isArray(results[0].value)) setDecisions(results[0].value);
+      if (Array.isArray(results[0].value)) {
+        const serverHasRun = results[0].value.some((decision) => decision.source !== "sample_preview");
+        if (!clientRunDecisions.current || serverHasRun) setDecisions(results[0].value);
+      }
       else nextErrors.decisions = "The decision log returned an unexpected format.";
     } else nextErrors.decisions = results[0].reason?.message || "Could not load the decision log.";
     if (results[1].status === "fulfilled") {
@@ -60,6 +76,11 @@ export default function useDashboardData() {
       try { result = await response.json(); }
       catch { throw new Error("The Run API returned an unreadable response."); }
       if (!response.ok && response.status !== 409) throw new Error(result.error || result.message || "The scheduler run could not start.");
+      if (Array.isArray(result.decisions)) {
+        clientRunDecisions.current = true;
+        setDecisions(result.decisions);
+        window.localStorage.setItem("auditagent:last-run", JSON.stringify(result.decisions));
+      }
       setRunStatus(result);
     } catch (error) {
       setRunStatus({ status: "failed", message: error.message || "Could not contact the Run API. Check that the dashboard server is running, then try again." });
