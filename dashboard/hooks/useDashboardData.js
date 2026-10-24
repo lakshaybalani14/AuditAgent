@@ -15,19 +15,19 @@ async function getJson(url) {
 
 export default function useDashboardData() {
   const clientRunDecisions = useRef(false);
-  const [decisions, setDecisions] = useState(() => {
-    if (typeof window === "undefined") return [];
+  const [decisions, setDecisions] = useState([]);
+
+  useEffect(() => {
     try {
       const saved = JSON.parse(window.localStorage.getItem("auditagent:last-run") || "null");
       if (Array.isArray(saved) && saved.length) {
         clientRunDecisions.current = true;
-        return saved;
+        setDecisions(saved);
       }
     } catch {
       window.localStorage.removeItem("auditagent:last-run");
     }
-    return [];
-  });
+  }, []);
   const [report, setReport] = useState(null);
   const [reportStatus, setReportStatus] = useState("loading");
   const [reportInfo, setReportInfo] = useState(null);
