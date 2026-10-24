@@ -224,7 +224,59 @@ function startRun(projectRoot, modelPath) {
   });
 }
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
+  const modelApiUrl = (process.env.SCHEDULER_MODEL_API_URL || "").replace(/\\/+$/, "");
+  if (modelApiUrl) {
+    if (req.method === "GET") {
+      try {
+        const response = await fetch(`${modelApiUrl}/api/run`, { cache: "no-store" });
+        const payload = await response.json();
+        if (!response.ok) {
+          return res.status(response.status).json({
+            status: payload.status || "model_missing",
+            modelAvailable: false,
+            message: payload.error || "The hosted trained model is unavailable.",
+          });
+        }
+        res.setHeader("Cache-Control", "no-store");
+        return res.status(200).json({
+          status: "idle",
+          modelAvailable: true,
+          modelPath: payload.modelPath || "rl_agent/policy.json",
+          outputPath: "This browser's saved run history",
+          message: "",
+          ...explanationSettings(),
+        });
+      } catch (error) {
+        return res.status(503).json({
+          status: "failed",
+          modelAvailable: false,
+          message: "Could not reach the hosted scheduler model.",
+          detail: error.message,
+        });
+      }
+    }
+    if (req.method === "POST") {
+      try {
+        const response = await fetch(`${modelApiUrl}/api/run`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ seed: 42, decisions: LIVE_DECISIONS }),
+        });
+        const payload = await response.json();
+        return res.status(response.status).json(payload);
+      } catch (error) {
+        return res.status(502).json({
+          status: "failed",
+          modelAvailable: false,
+          message: "Could not contact the hosted scheduler model.",
+          detail: error.message,
+        });
+      }
+    }
+    res.setHeader("Allow", "GET, POST");
+    return res.status(405).json({ error: "Method not allowed." });
+  }
   if (req.method === "GET") {
     res.setHeader("Cache-Control", "no-store");
     const projectRoot = path.resolve(process.cwd(), "..");
